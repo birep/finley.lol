@@ -15,7 +15,7 @@ set -e
 
 PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 GAME_NAME="${1:-}"
-BRANCH="${2:-main}"
+BRANCH="${2:-master}"
 
 cd "$PROJECT_DIR"
 
