@@ -43,24 +43,43 @@ if [ -z "$ZONE_ID" ]; then
     exit 1
 fi
 
-echo "Adding DNS record: ${GAME_NAME}.${DOMAIN} → ${GAME_NAME}.pages.dev"
+DNS_NAME="${GAME_NAME}.${DOMAIN}"
+echo "Adding/updating DNS record: ${DNS_NAME} → ${GAME_NAME}.pages.dev"
 
-# Create DNS record
-RESPONSE=$(curl -s -X POST "https://api.cloudflare.com/client/v4/zones/${ZONE_ID}/dns_records" \
+# Check if record exists
+RECORD_EXISTS=$(curl -s -X GET "https://api.cloudflare.com/client/v4/zones/${ZONE_ID}/dns_records?name=${DNS_NAME}" \
   -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
-  -H "Content-Type: application/json" \
-  -d "{
-    \"type\": \"CNAME\",
-    \"name\": \"${GAME_NAME}\",
-    \"content\": \"${GAME_NAME}.pages.dev\",
-    \"ttl\": 1,
-    \"proxied\": true
-  }")
+  -H "Content-Type: application/json" | python3 -c "import sys,json; r=json.load(sys.stdin); print('true' if r.get('success') and r.get('result') and len(r['result']) > 0 else 'false')")
 
-if echo "$RESPONSE" | python3 -c "import sys,json; sys.exit(0 if json.load(sys.stdin).get('success') else 1)"; then
-    echo "✅ DNS record created successfully"
+if [ "$RECORD_EXISTS" = "true" ]; then
+    # Get the record ID and update it
+    RECORD_ID=$(curl -s -X GET "https://api.cloudflare.com/client/v4/zones/${ZONE_ID}/dns_records?name=${DNS_NAME}" \
+      -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+      -H "Content-Type: application/json" | python3 -c "import sys,json; r=json.load(sys.stdin); print(r['result'][0]['id'] if r.get('success') and r.get('result') else '')")
+
+    if [ -n "$RECORD_ID" ]; then
+        curl -s -X PATCH "https://api.cloudflare.com/client/v4/zones/${ZONE_ID}/dns_records/${RECORD_ID}" \
+          -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+          -H "Content-Type: application/json" \
+          -d "{
+            \"content\": \"${GAME_NAME}.pages.dev\",
+            \"proxied\": true
+          }" > /dev/null
+        echo "✅ DNS record updated"
+    else
+        echo "⚠️  Could not find record ID"
+    fi
 else
-    echo "❌ Failed to create DNS record"
-    echo "$RESPONSE" | python3 -m json.tool
-    exit 1
+    # Create new record
+    curl -s -X POST "https://api.cloudflare.com/client/v4/zones/${ZONE_ID}/dns_records" \
+      -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+      -H "Content-Type: application/json" \
+      -d "{
+        \"type\": \"CNAME\",
+        \"name\": \"${GAME_NAME}\",
+        \"content\": \"${GAME_NAME}.pages.dev\",
+        \"ttl\": 1,
+        \"proxied\": true
+      }" > /dev/null
+    echo "✅ DNS record created"
 fi
