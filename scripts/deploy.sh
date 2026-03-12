@@ -90,28 +90,42 @@ else
     echo "⚠️  No git remote configured. Push manually to enable auto-deploy."
 fi
 
-# Create Pages project
+# Create Pages project (or update if it exists)
 echo ""
-echo "Creating Cloudflare Pages project..."
+echo "Creating/updating Cloudflare Pages project..."
 
-PROJECT_RESPONSE=$(curl -s -X POST "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/pages/projects" \
+# Check if project exists first
+PROJECT_EXISTS=$(curl -s -X GET "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/pages/projects/${GAME_NAME}" \
   -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
-  -H "Content-Type: application/json" \
-  -d "{
-    \"name\": \"${GAME_NAME}\",
-    \"production_branch\": \"${BRANCH}\",
-    \"build_config\": {
-      \"build_command\": \"echo 'Static HTML - no build step'\",
-      \"destination_dir\": \"${GAME_DIR}\",
-      \"root_dir\": \".\"
-    }
-  }")
+  -H "Content-Type: application/json" | python3 -c "import sys,json; print('true' if json.load(sys.stdin).get('success') else 'false')")
 
-if echo "$PROJECT_RESPONSE" | python3 -c "import sys,json; sys.exit(0 if json.load(sys.stdin).get('success') else 1)"; then
-    echo "✅ Pages project created/updated"
+if [ "$PROJECT_EXISTS" = "true" ]; then
+    echo "Project exists, updating..."
+    curl -s -X PATCH "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/pages/projects/${GAME_NAME}" \
+      -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+      -H "Content-Type: application/json" \
+      -d "{
+        \"build_config\": {
+          \"build_command\": \"echo 'Static HTML - no build step'\",
+          \"destination_dir\": \"${GAME_DIR}\",
+          \"root_dir\": \".\"
+        }
+      }" > /dev/null
+    echo "✅ Pages project updated"
 else
-    echo "⚠️  Pages project creation failed (may already exist)"
-    echo "$PROJECT_RESPONSE" | python3 -m json.tool
+    curl -s -X POST "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/pages/projects" \
+      -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+      -H "Content-Type: application/json" \
+      -d "{
+        \"name\": \"${GAME_NAME}\",
+        \"production_branch\": \"${BRANCH}\",
+        \"build_config\": {
+          \"build_command\": \"echo 'Static HTML - no build step'\",
+          \"destination_dir\": \"${GAME_DIR}\",
+          \"root_dir\": \".\"
+        }
+      }" > /dev/null
+    echo "✅ Pages project created"
 fi
 
 # Add DNS record
