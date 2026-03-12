@@ -1,0 +1,1435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>HAY RUNNER</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #0d0d1a; overflow: hidden; font-family: 'Press Start 2P', monospace; }
+  #gameCanvas { display: block; image-rendering: pixelated; }
+
+  /* CRT scanline overlay */
+  body::after {
+    content: '';
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.08) 2px, rgba(0,0,0,0.08) 4px);
+    pointer-events: none; z-index: 999;
+  }
+
+  #ui { position: absolute; top: 0; left: 0; width: 100%; pointer-events: none; color: #fff; }
+
+  #hud {
+    display: flex; justify-content: space-between; align-items: flex-start;
+    padding: 10px 18px; background: rgba(0,0,0,0.82);
+    border-bottom: 3px solid #4a7c59; gap: 16px;
+  }
+
+  #hud-left { display: flex; flex-direction: column; gap: 6px; }
+  #hud-right { text-align: right; }
+
+  .level-badge {
+    font-size: 10px; color: #F4D03F; margin-bottom: 2px;
+    text-shadow: 2px 2px #000;
+  }
+  .herd-detail { font-size: 7px; color: #aaa; }
+  .score-label { font-size: 8px; color: #aaa; }
+  .score-val { font-size: 14px; color: #F4D03F; text-shadow: 2px 2px #000; }
+
+  #carry-ui {
+    position: absolute; bottom: 24px; left: 50%;
+    transform: translateX(-50%);
+    font-size: 11px; color: #F4D03F;
+    text-shadow: 2px 2px #000; text-align: center;
+    animation: pulse 1s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.6} }
+
+  #msg-overlay {
+    position: absolute; top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(0,0,0,0.92);
+    border: 3px solid #4a7c59;
+    box-shadow: 0 0 30px rgba(74,124,89,0.5);
+    padding: 36px 44px; text-align: center; min-width: 360px;
+  }
+  #msg-overlay h1 {
+    font-size: 22px; color: #F4D03F; margin-bottom: 18px;
+    text-shadow: 3px 3px #8B4513;
+    letter-spacing: 2px;
+  }
+  #msg-overlay p {
+    font-size: 9px; line-height: 2.2; color: #ddd; margin-bottom: 24px;
+  }
+  #msg-overlay .sub { font-size: 8px; color: #aaa; margin-top: -10px; margin-bottom: 20px; }
+
+  .retro-btn {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 11px; background: #4a7c59; color: #fff;
+    border: none; padding: 12px 24px; cursor: pointer;
+    pointer-events: all; display: inline-block;
+    box-shadow: 3px 3px #1a3d27;
+    transition: transform 0.1s;
+  }
+  .retro-btn:hover { background: #5a9c69; transform: translate(-1px,-1px); }
+  .retro-btn:active { transform: translate(2px,2px); box-shadow: 1px 1px #1a3d27; }
+
+  #flash-overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(255,0,0,0); pointer-events: none; z-index: 500;
+    transition: background 0.05s;
+  }
+
+  #apple-popup {
+    position: absolute; top: 140px; right: 30px;
+    font-size: 10px; color: #E74C3C; text-shadow: 2px 2px #000;
+    display: none; animation: bounce 0.5s ease infinite alternate;
+  }
+  @keyframes bounce { from{transform:translateY(0)} to{transform:translateY(-6px)} }
+
+  #level-up-banner {
+    position: absolute; top: 90px; left: 50%; transform: translateX(-50%);
+    font-size: 14px; color: #F4D03F; text-shadow: 3px 3px #000;
+    display: none; animation: pulse 0.4s ease infinite;
+  }
+
+  #controls-hint {
+    position: absolute; bottom: 8px; right: 16px;
+    font-size: 7px; color: #555;
+  }
+
+
+</style>
+</head>
+<body>
+<canvas id="gameCanvas"></canvas>
+<div id="flash-overlay"></div>
+<div id="ui">
+  <div id="hud">
+    <div id="hud-left">
+      <div class="level-badge">🐴 HERD: <span id="level-num">1</span></div>
+      <div class="herd-detail">🐎 FOALS: <span id="foal-num">0</span> &nbsp;|&nbsp; 💀 DEAD: <span id="dead-num">0</span></div>
+    </div>
+    <div id="hud-right">
+      <div class="score-label">SCORE</div>
+      <div class="score-val" id="score">0</div>
+    </div>
+  </div>
+  <div id="carry-ui"></div>
+  <div id="apple-popup">🍎 APPLE APPEARED!</div>
+  <div id="level-up-banner">🐴 NEW FOAL BORN! 🐴</div>
+  <div id="msg-overlay">
+    <h1>HAY RUNNER</h1>
+    <p>
+      🌾 Cross the bridge to collect HAY<br>
+      🐴 Walk up to a horse to feed it<br>
+      🍎 Feed an APPLE to an ADULT for a foal!<br>
+      ☠️ Don't get hit by monsters!<br>
+      🐎 Foals grow up after 10 feeds<br>
+      💀 You lose when ALL horses starve
+    </p>
+    <div class="sub">TAP WHERE YOU WANT TO MOVE</div>
+    <button class="retro-btn" id="start-btn">START GAME</button>
+  </div>
+  <div id="controls-hint">TAP TO MOVE</div>
+
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+// =====================================================================
+// CONSTANTS
+// =====================================================================
+const GW = 21, GH = 11;          // grid width, height
+const PEN_X1 = 5;                 // pen: x 0..4
+const BRIDGE_X0 = 5, BRIDGE_X1 = 15; // bridge: x 5..14
+const RIGHT_X0 = 15;              // right area: x 15..20
+const GATE_Z0 = 3, GATE_Z1 = 7;  // pen gate z range (inclusive)
+const BRIDGE_Z0 = 1, BRIDGE_Z1 = 9; // walkable bridge rows
+const HAY = { x: 19, z: 5 };
+const APPLE_POS = { x: 17, z: 3 };
+const P_START = { x: 2, z: 5 };
+const HORSE_SLOTS = [
+  {x:1,z:3},{x:3,z:2},{x:1,z:7},{x:3,z:8},{x:3,z:6},{x:2,z:1},{x:1,z:9}
+];
+const HUNGER_RATE = 0.85; // % per second per horse
+const APPLE_INTERVAL = 32; // seconds between apple spawns
+const MOVE_DELAY = 0.13;   // seconds between player moves
+
+// Colors
+const COL = {
+  sky:      0x0d0d1a,
+  pen:      0x3a5e3a,
+  penDark:  0x2e4d2e,
+  right:    0x3a5e3a,
+  water:    0x112244,
+  waterDark:0x0d1a33,
+  bridge:   0x9B7040,
+  bridgeAlt:0xB8864E,
+  fence:    0x8B5A1A,
+  fenceRail:0x7a4e15,
+  player:   0xe8a87c,
+  playerTop:0x8B2500,
+  horse:    0x8B5E3C,
+  babyHorse:0xC9A06A,
+  monster1: 0x8B0000,
+  monster2: 0x4B0082,
+  hay:      0xF4D03F,
+  hayDark:  0xC9972A,
+  apple:    0xE74C3C,
+  appleLeaf:0x2ecc40,
+  tree:     0x2d5a27,
+  treeTrunk:0x6B4226,
+  grass:    0x4a7c59,
+  star:     0xffffff,
+};
+
+// =====================================================================
+// THREE.JS SETUP
+// =====================================================================
+const canvas = document.getElementById('gameCanvas');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: false });
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setClearColor(COL.sky);
+renderer.shadowMap.enabled = false;
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+
+const scene = new THREE.Scene();
+scene.fog = new THREE.Fog(COL.sky, 22, 38);
+
+// Isometric-ish perspective camera
+const camera = new THREE.PerspectiveCamera(48, window.innerWidth / window.innerHeight, 0.1, 100);
+camera.position.set(10, 14, 17);
+camera.lookAt(10, 0, 5);
+
+// Lighting
+const ambientLight = new THREE.AmbientLight(0x8899aa, 0.7);
+scene.add(ambientLight);
+const sunLight = new THREE.DirectionalLight(0xfff4e0, 1.1);
+sunLight.position.set(8, 12, 6);
+scene.add(sunLight);
+const moonLight = new THREE.DirectionalLight(0x2244aa, 0.4);
+moonLight.position.set(-6, 8, -4);
+scene.add(moonLight);
+
+// =====================================================================
+// HELPERS
+// =====================================================================
+function mkBox(w, h, d, col) {
+  const g = new THREE.BoxGeometry(w, h, d);
+  const m = new THREE.MeshLambertMaterial({ color: col });
+  return new THREE.Mesh(g, m);
+}
+function mkSphere(r, col, segs = 6) {
+  const g = new THREE.SphereGeometry(r, segs, segs);
+  const m = new THREE.MeshLambertMaterial({ color: col });
+  return new THREE.Mesh(g, m);
+}
+function gWorld(gx, gz) { // grid to world center
+  return { x: gx + 0.5, y: 0, z: gz + 0.5 };
+}
+
+// =====================================================================
+// GAME STATE
+// =====================================================================
+let STATE = 'menu'; // menu | playing | dead | gameover
+let player = { x: 0, z: 0 };
+let carrying = null; // null | 'hay' | 'apple'
+let horses = [];
+let monsters = [];
+let level = 1;
+let score = 0;
+let appleTimer = 0;
+let appleActive = false;
+let moveTimer = 0;
+let lastTs = 0;
+let deathCountdown = 0;
+let totalTime = 0;
+
+// Meshes
+let playerGroup = null;
+let carryMesh = null;
+let appleMesh = null;
+let hayMesh = null;
+let worldGroup = new THREE.Group();
+scene.add(worldGroup);
+
+// Stars
+const starsGroup = new THREE.Group();
+scene.add(starsGroup);
+(function makeStars() {
+  for (let i = 0; i < 120; i++) {
+    const s = mkBox(0.1, 0.1, 0.1, COL.star);
+    s.position.set(
+      (Math.random() - 0.5) * 40 + 10,
+      8 + Math.random() * 10,
+      (Math.random() - 0.5) * 40 + 5
+    );
+    starsGroup.add(s);
+  }
+})();
+
+// =====================================================================
+// WORLD BUILDING
+// =====================================================================
+function buildWorld() {
+  while (worldGroup.children.length) worldGroup.remove(worldGroup.children[0]);
+
+  // Ground planes
+  addGround(PEN_X1 / 2, GH / 2, PEN_X1, GH, COL.pen); // left pen
+  addGround((RIGHT_X0 + GW) / 2, GH / 2, GW - RIGHT_X0, GH, COL.right); // right
+  addGround((BRIDGE_X0 + BRIDGE_X1) / 2, GH / 2, BRIDGE_X1 - BRIDGE_X0, GH, COL.waterDark); // water under bridge
+  // Water shimmer strips
+  for (let z = 0; z < GH; z++) {
+    const strip = mkBox(BRIDGE_X1 - BRIDGE_X0, 0.02, 0.6, z % 2 === 0 ? COL.water : COL.waterDark);
+    strip.position.set((BRIDGE_X0 + BRIDGE_X1) / 2, -0.02, z + 0.7);
+    worldGroup.add(strip);
+  }
+
+  // Bridge planks
+  for (let z = BRIDGE_Z0; z <= BRIDGE_Z1; z++) {
+    for (let x = BRIDGE_X0; x < BRIDGE_X1; x++) {
+      const col = (x + z) % 2 === 0 ? COL.bridge : COL.bridgeAlt;
+      const plank = mkBox(0.95, 0.12, 0.95, col);
+      plank.position.set(x + 0.5, 0.01, z + 0.5);
+      worldGroup.add(plank);
+    }
+  }
+  // Bridge side rails
+  for (let x = BRIDGE_X0; x < BRIDGE_X1; x++) {
+    const r1 = mkBox(0.9, 0.3, 0.12, COL.fence);
+    r1.position.set(x + 0.5, 0.2, BRIDGE_Z0 - 0.5);
+    worldGroup.add(r1);
+    const r2 = mkBox(0.9, 0.3, 0.12, COL.fence);
+    r2.position.set(x + 0.5, 0.2, BRIDGE_Z1 + 0.5);
+    worldGroup.add(r2);
+  }
+
+  // Pen fencing (all sides with gate opening on right)
+  buildPenFence();
+
+  // Right area border fence (top and bottom only, left side open, right side wall)
+  buildRightFence();
+
+  // Hay pile
+  hayMesh = buildHayPile(HAY.x, HAY.z);
+  worldGroup.add(hayMesh);
+
+  // Decorations: trees in right area
+  [[16, 1], [16, 9], [20, 2], [20, 8]].forEach(([tx, tz]) => {
+    const trunk = mkBox(0.3, 0.9, 0.3, COL.treeTrunk);
+    trunk.position.set(tx + 0.5, 0.45, tz + 0.5);
+    worldGroup.add(trunk);
+    const leaves = mkBox(0.9, 0.9, 0.9, COL.tree);
+    leaves.position.set(tx + 0.5, 1.1, tz + 0.5);
+    worldGroup.add(leaves);
+    const top = mkBox(0.55, 0.55, 0.55, COL.tree);
+    top.position.set(tx + 0.5, 1.7, tz + 0.5);
+    worldGroup.add(top);
+  });
+
+  // Pen corner posts
+  [[0,0],[0,10],[4,0],[4,10]].forEach(([px,pz]) => {
+    const post = mkBox(0.22, 1.1, 0.22, COL.fence);
+    post.position.set(px + 0.5, 0.55, pz + 0.5);
+    worldGroup.add(post);
+  });
+
+  // Water rocks decoration
+  [[6.5,0.5],[9.2,10.3],[12.7,0.3],[11,10.5]].forEach(([rx,rz]) => {
+    const rock = mkBox(0.4, 0.2, 0.35, 0x556677);
+    rock.position.set(rx, 0.05, rz);
+    worldGroup.add(rock);
+  });
+}
+
+function addGround(cx, cz, w, h, col) {
+  const g = new THREE.PlaneGeometry(w, h);
+  const m = new THREE.MeshLambertMaterial({ color: col });
+  const mesh = new THREE.Mesh(g, m);
+  mesh.rotation.x = -Math.PI / 2;
+  mesh.position.set(cx, -0.01, cz);
+  worldGroup.add(mesh);
+  // Subtle grid lines
+  const darker = new THREE.Color(col).multiplyScalar(0.88);
+  for (let i = 0; i <= w; i++) {
+    const line = mkBox(0.04, 0.001, h, darker.getHex());
+    line.position.set(cx - w/2 + i, 0, cz);
+    worldGroup.add(line);
+  }
+}
+
+function buildPenFence() {
+  const H = 0.65, W = 0.12;
+  // Bottom edge (z=0)
+  for (let x = 0; x <= 5; x++) {
+    const p = mkBox(W, H, W, COL.fence);
+    p.position.set(x, H/2, 0); worldGroup.add(p);
+  }
+  // Top edge (z=10)
+  for (let x = 0; x <= 5; x++) {
+    const p = mkBox(W, H, W, COL.fence);
+    p.position.set(x, H/2, GH); worldGroup.add(p);
+  }
+  // Left edge (x=0)
+  for (let z = 0; z <= 10; z++) {
+    const p = mkBox(W, H, W, COL.fence);
+    p.position.set(0, H/2, z); worldGroup.add(p);
+  }
+  // Right edge (x=5) with gate gap at z=GATE_Z0..GATE_Z1
+  for (let z = 0; z <= 10; z++) {
+    if (z >= GATE_Z0 && z <= GATE_Z1) continue;
+    const p = mkBox(W, H, W, COL.fence);
+    p.position.set(5, H/2, z); worldGroup.add(p);
+  }
+  // Gate posts
+  [GATE_Z0, GATE_Z1].forEach(gz => {
+    const gp = mkBox(0.2, 0.85, 0.2, COL.fence);
+    gp.position.set(5, 0.425, gz); worldGroup.add(gp);
+  });
+  // Rails
+  const rails = [
+    [PEN_X1/2, 0.3, 0, PEN_X1, 0.08, W],
+    [PEN_X1/2, 0.5, 0, PEN_X1, 0.08, W],
+    [PEN_X1/2, 0.3, GH, PEN_X1, 0.08, W],
+    [PEN_X1/2, 0.5, GH, PEN_X1, 0.08, W],
+    [0, 0.3, GH/2, W, 0.08, GH],
+    [0, 0.5, GH/2, W, 0.08, GH],
+  ];
+  rails.forEach(([rx,ry,rz,rw,rh,rd]) => {
+    const r = mkBox(rw, rh, rd, COL.fenceRail);
+    r.position.set(rx, ry, rz); worldGroup.add(r);
+  });
+}
+
+function buildRightFence() {
+  const H = 0.65, W = 0.12;
+  // Top and bottom of right area
+  for (let x = RIGHT_X0; x <= GW; x++) {
+    const p1 = mkBox(W, H, W, COL.fence);
+    p1.position.set(x, H/2, 0); worldGroup.add(p1);
+    const p2 = mkBox(W, H, W, COL.fence);
+    p2.position.set(x, H/2, GH); worldGroup.add(p2);
+  }
+  // Right boundary
+  for (let z = 0; z <= GH; z++) {
+    const p = mkBox(W, H, W, COL.fence);
+    p.position.set(GW, H/2, z); worldGroup.add(p);
+  }
+  // Rails
+  const w = GW - RIGHT_X0;
+  const cx = RIGHT_X0 + w/2;
+  [[cx,0],[cx,GH],[GW,GH/2]].forEach(([rx,rz]) => {
+    const r = mkBox(rz === GH/2 ? W : w, 0.08, rz === GH/2 ? GH : W, COL.fenceRail);
+    r.position.set(rx, 0.4, rz); worldGroup.add(r);
+  });
+}
+
+function buildHayPile(hx, hz) {
+  const g = new THREE.Group();
+  const base = mkBox(1.1, 0.55, 1.1, COL.hay);
+  base.position.y = 0.275; g.add(base);
+  const mid = mkBox(0.85, 0.4, 0.85, COL.hayDark);
+  mid.position.y = 0.75; g.add(mid);
+  const top = mkBox(0.55, 0.3, 0.55, COL.hay);
+  top.position.y = 1.05; g.add(top);
+  // Straw strands
+  for (let i = 0; i < 6; i++) {
+    const strand = mkBox(0.06, 0.06, 1.2, COL.hayDark);
+    strand.position.set((Math.random()-0.5)*0.8, 0.55+i*0.04, 0);
+    strand.rotation.y = Math.random() * 0.5;
+    g.add(strand);
+  }
+  g.position.set(hx + 0.5, 0, hz + 0.5);
+  return g;
+}
+
+// =====================================================================
+// PLAYER MESH
+// =====================================================================
+function buildPlayerMesh() {
+  if (playerGroup) scene.remove(playerGroup);
+  const g = new THREE.Group();
+  // Legs
+  const legL = mkBox(0.18, 0.32, 0.18, 0x3a5f8a);
+  legL.position.set(-0.13, 0.16, 0); g.add(legL);
+  const legR = mkBox(0.18, 0.32, 0.18, 0x3a5f8a);
+  legR.position.set(0.13, 0.16, 0); g.add(legR);
+  // Body
+  const body = mkBox(0.52, 0.55, 0.38, 0xd4754d);
+  body.position.y = 0.58; g.add(body);
+  // Overalls pocket
+  const pocket = mkBox(0.16, 0.14, 0.06, 0x2a4a6a);
+  pocket.position.set(-0.14, 0.6, 0.2); g.add(pocket);
+  // Arms
+  const armL = mkBox(0.15, 0.42, 0.15, COL.player);
+  armL.position.set(-0.33, 0.52, 0); g.add(armL);
+  const armR = mkBox(0.15, 0.42, 0.15, COL.player);
+  armR.position.set(0.33, 0.52, 0); g.add(armR);
+  // Head
+  const head = mkBox(0.42, 0.42, 0.42, COL.player);
+  head.position.y = 1.06; g.add(head);
+  // Eyes
+  const eyeL = mkBox(0.08, 0.08, 0.06, 0x000000);
+  eyeL.position.set(-0.1, 1.1, 0.22); g.add(eyeL);
+  const eyeR = mkBox(0.08, 0.08, 0.06, 0x000000);
+  eyeR.position.set(0.1, 1.1, 0.22); g.add(eyeR);
+  // Cowboy hat brim
+  const hatBrim = mkBox(0.65, 0.06, 0.65, COL.playerTop);
+  hatBrim.position.y = 1.3; g.add(hatBrim);
+  // Hat crown
+  const hatCrown = mkBox(0.42, 0.28, 0.42, COL.playerTop);
+  hatCrown.position.y = 1.49; g.add(hatCrown);
+  // Hat band
+  const band = mkBox(0.44, 0.06, 0.44, 0xaa3300);
+  band.position.y = 1.35; g.add(band);
+
+  playerGroup = g;
+  scene.add(g);
+  return g;
+}
+
+function updatePlayerPos() {
+  if (!playerGroup) return;
+  playerGroup.position.set(player.x + 0.5, 0, player.z + 0.5);
+}
+
+// =====================================================================
+// HORSE MESH
+// =====================================================================
+function buildHorseMesh(hx, hz, adult) {
+  const g = new THREE.Group();
+  const s = adult ? 1.0 : 0.58;
+  const col = adult ? COL.horse : COL.babyHorse;
+  const dark = adult ? 0x5a3a1a : 0x9a6a3a;
+
+  // Legs
+  [[-0.2,-0.14],[-0.2,0.14],[0.2,-0.14],[0.2,0.14]].forEach(([lx,lz]) => {
+    const leg = mkBox(0.12*s, 0.38*s, 0.12*s, col);
+    leg.position.set(lx*s, 0.19*s, lz*s); g.add(leg);
+  });
+  // Body
+  const body = mkBox(0.75*s, 0.45*s, 0.42*s, col);
+  body.position.y = 0.52*s; g.add(body);
+  // Neck
+  const neck = mkBox(0.22*s, 0.38*s, 0.22*s, col);
+  neck.position.set(0.3*s, 0.72*s, 0); g.add(neck);
+  // Head
+  const head = mkBox(0.32*s, 0.3*s, 0.28*s, col);
+  head.position.set(0.48*s, 0.88*s, 0); g.add(head);
+  // Snout
+  const snout = mkBox(0.22*s, 0.18*s, 0.22*s, col);
+  snout.position.set(0.65*s, 0.76*s, 0); g.add(snout);
+  // Nostrils
+  const nL = mkBox(0.06*s, 0.04*s, 0.05*s, dark);
+  nL.position.set(0.76*s, 0.78*s, 0.06*s); g.add(nL);
+  const nR = mkBox(0.06*s, 0.04*s, 0.05*s, dark);
+  nR.position.set(0.76*s, 0.78*s, -0.06*s); g.add(nR);
+  // Eyes
+  const eyeL = mkBox(0.06*s, 0.07*s, 0.05*s, 0x000000);
+  eyeL.position.set(0.55*s, 0.92*s, 0.15*s); g.add(eyeL);
+  const eyeR = mkBox(0.06*s, 0.07*s, 0.05*s, 0x000000);
+  eyeR.position.set(0.55*s, 0.92*s, -0.15*s); g.add(eyeR);
+  // Ears
+  const earL = mkBox(0.08*s, 0.14*s, 0.07*s, col);
+  earL.position.set(0.42*s, 1.03*s, 0.11*s); g.add(earL);
+  const earR = mkBox(0.08*s, 0.14*s, 0.07*s, col);
+  earR.position.set(0.42*s, 1.03*s, -0.11*s); g.add(earR);
+  // Mane
+  for (let i = 0; i < 4; i++) {
+    const mane = mkBox(0.1*s, 0.14*s, 0.38*s, dark);
+    mane.position.set((0.2+i*0.12)*s, (0.78+i*0.04)*s, 0); g.add(mane);
+  }
+  // Tail
+  const tail = mkBox(0.1*s, 0.44*s, 0.1*s, dark);
+  tail.position.set(-0.38*s, 0.52*s, 0); g.add(tail);
+  const tailTip = mkBox(0.14*s, 0.2*s, 0.14*s, dark);
+  tailTip.position.set(-0.42*s, 0.24*s, 0); g.add(tailTip);
+
+  g.position.set(hx + 0.5, 0, hz + 0.5);
+  g.rotation.y = -0.3;
+  scene.add(g);
+  return g;
+}
+
+// =====================================================================
+// 3D FLOATING HUNGER BAR
+// =====================================================================
+const BAR_W = 0.72, BAR_H = 0.1, BAR_THICK = 0.04;
+function buildHungerBar() {
+  const g = new THREE.Group();
+  // Background
+  const bg = mkBox(BAR_W + 0.06, BAR_H + 0.04, BAR_THICK, 0x111111);
+  bg.position.y = 0; g.add(bg);
+  // Fill (we'll scale x each frame)
+  const fill = mkBox(BAR_W, BAR_H, BAR_THICK + 0.01, 0x44cc55);
+  fill.position.y = 0;
+  fill._isBarFill = true;
+  g.add(fill);
+  // Black outline border feel — small side caps
+  const capL = mkBox(0.03, BAR_H + 0.06, BAR_THICK + 0.02, 0x000000);
+  capL.position.set(-(BAR_W/2 + 0.015), 0, 0); g.add(capL);
+  const capR = mkBox(0.03, BAR_H + 0.06, BAR_THICK + 0.02, 0x000000);
+  capR.position.set(BAR_W/2 + 0.015, 0, 0); g.add(capR);
+  return g;
+}
+
+function updateHungerBar(h, ts) {
+  if (!h.barGroup || !h.mesh) return;
+  // Position above horse, billboard to camera
+  const s = h.adult ? 1.0 : 0.58;
+  const barY = s * 1.25 + 0.2;
+  h.barGroup.position.set(h.mesh.position.x, barY, h.mesh.position.z);
+  h.barGroup.quaternion.copy(camera.quaternion);
+
+  // Update fill scale and color
+  const fill = h.barGroup.children.find(c => c._isBarFill);
+  if (!fill) return;
+  const pct = Math.max(0, h.hunger) / 100;
+  fill.scale.x = Math.max(0.001, pct);
+  // Offset to left-align
+  fill.position.x = -(BAR_W / 2) * (1 - pct);
+  // Color: green → yellow → red
+  const col = new THREE.Color();
+  if (pct > 0.55)      col.setHex(0x44cc55);
+  else if (pct > 0.28) col.setHex(0xe0a020);
+  else                 col.setHex(0xcc2222);
+  fill.material.color.copy(col);
+
+  // Flash when very low
+  if (h.hunger < 20 && Math.floor(ts / 300) % 2 === 0) {
+    h.barGroup.visible = true;
+    const flash = new THREE.Color(0xff4444);
+    fill.material.color.lerp(flash, 0.5);
+  } else {
+    h.barGroup.visible = true;
+  }
+
+  // Foal feed-count pip row (small dots showing progress to adulthood)
+  // We'll show a tiny text-like indicator using a second bar
+  if (!h.adult && h.pipRow) {
+    h.pipRow.position.set(h.mesh.position.x, barY + 0.16, h.mesh.position.z);
+    h.pipRow.quaternion.copy(camera.quaternion);
+    // update pip fills
+    h.pipRow.children.forEach((pip, i) => {
+      if (pip._isPip) {
+        pip.material.color.setHex(i < (h.feedCount || 0) ? 0xF4D03F : 0x333333);
+      }
+    });
+  }
+}
+
+// =====================================================================
+// SPAWN HORSE (mesh + bar + pips)
+// =====================================================================
+function spawnHorse(wx, wz, adult) {
+  const gx = Math.floor(wx), gz = Math.floor(wz);
+  const mesh = buildHorseMesh(gx, gz, adult);
+  const barGroup = buildHungerBar();
+  scene.add(barGroup);
+
+  // Foal pip row — 10 small squares showing feed progress toward adulthood
+  let pipRow = null;
+  if (!adult) {
+    pipRow = new THREE.Group();
+    const pipW = 0.055, gap = 0.072;
+    for (let i = 0; i < 10; i++) {
+      const pip = mkBox(pipW, pipW, 0.03, 0x333333);
+      pip.position.x = (i - 4.5) * gap;
+      pip._isPip = true;
+      pipRow.add(pip);
+    }
+    scene.add(pipRow);
+  }
+
+  return {
+    x: gx, z: gz, wx: wx, wz: wz, tx: wx, tz: wz,
+    hunger: 100, mesh, barGroup, pipRow,
+    adult, feedCount: 0,
+    wobble: Math.random() * Math.PI * 2,
+    wanderTimer: Math.random() * 3,
+    dancing: false, danceTimer: 0, dancePhase: 0,
+    dead: false,
+  };
+}
+function buildMonsterMesh(type) {
+  const g = new THREE.Group();
+  const col = type === 0 ? COL.monster1 : COL.monster2;
+  const eyeCol = type === 0 ? 0xff6600 : 0x00ffcc;
+
+  // Legs
+  const legL = mkBox(0.2, 0.3, 0.2, col);
+  legL.position.set(-0.16, 0.15, 0); g.add(legL);
+  const legR = mkBox(0.2, 0.3, 0.2, col);
+  legR.position.set(0.16, 0.15, 0); g.add(legR);
+  // Body
+  const body = mkBox(0.62, 0.55, 0.48, col);
+  body.position.y = 0.58; g.add(body);
+  // Belly lighter
+  const belly = mkBox(0.38, 0.32, 0.1, 0xcc3333);
+  belly.position.set(0, 0.52, 0.25); g.add(belly);
+  // Arms
+  const armL = mkBox(0.16, 0.42, 0.16, col);
+  armL.position.set(-0.38, 0.5, 0); g.add(armL);
+  const armR = mkBox(0.16, 0.42, 0.16, col);
+  armR.position.set(0.38, 0.5, 0); g.add(armR);
+  // Claws
+  for (let i = -1; i <= 1; i++) {
+    const cL = mkBox(0.07, 0.14, 0.07, 0x333333);
+    cL.position.set(-0.38, 0.24, i*0.08); g.add(cL);
+    const cR = mkBox(0.07, 0.14, 0.07, 0x333333);
+    cR.position.set(0.38, 0.24, i*0.08); g.add(cR);
+  }
+  // Head
+  const head = mkBox(0.56, 0.54, 0.52, col);
+  head.position.y = 1.02; g.add(head);
+  // Eyes
+  const eyeL = mkBox(0.11, 0.13, 0.08, eyeCol);
+  eyeL.position.set(-0.14, 1.1, 0.27); g.add(eyeL);
+  const eyeR = mkBox(0.11, 0.13, 0.08, eyeCol);
+  eyeR.position.set(0.14, 1.1, 0.27); g.add(eyeR);
+  // Pupils
+  const pupL = mkBox(0.06, 0.08, 0.05, 0x000000);
+  pupL.position.set(-0.14, 1.08, 0.3); g.add(pupL);
+  const pupR = mkBox(0.06, 0.08, 0.05, 0x000000);
+  pupR.position.set(0.14, 1.08, 0.3); g.add(pupR);
+  // Horns
+  const hornL = mkBox(0.1, 0.28, 0.1, 0x888888);
+  hornL.position.set(-0.16, 1.4, 0); g.add(hornL);
+  const hornR = mkBox(0.1, 0.28, 0.1, 0x888888);
+  hornR.position.set(0.16, 1.4, 0); g.add(hornR);
+  // Mouth
+  const mouth = mkBox(0.26, 0.07, 0.07, 0x000000);
+  mouth.position.set(0, 0.88, 0.27); g.add(mouth);
+  // Teeth
+  const tooth = mkBox(0.07, 0.09, 0.06, 0xdddddd);
+  tooth.position.set(-0.06, 0.87, 0.3); g.add(tooth);
+  const tooth2 = mkBox(0.07, 0.09, 0.06, 0xdddddd);
+  tooth2.position.set(0.06, 0.87, 0.3); g.add(tooth2);
+
+  return g;
+}
+
+// =====================================================================
+// APPLE MESH
+// =====================================================================
+function buildAppleMesh() {
+  const g = new THREE.Group();
+  const body = mkSphere(0.28, COL.apple, 8);
+  body.position.y = 0.28; g.add(body);
+  const stem = mkBox(0.05, 0.2, 0.05, 0x6B4226);
+  stem.position.y = 0.6; g.add(stem);
+  const leaf = mkBox(0.16, 0.06, 0.22, COL.appleLeaf);
+  leaf.position.set(0.1, 0.68, 0); leaf.rotation.z = 0.4; g.add(leaf);
+  g.position.set(APPLE_POS.x + 0.5, 0, APPLE_POS.z + 0.5);
+  return g;
+}
+
+// =====================================================================
+// CARRYING MESH
+// =====================================================================
+function buildCarryMesh(type) {
+  if (carryMesh) scene.remove(carryMesh);
+  if (type === 'hay') {
+    const g = new THREE.Group();
+    const b = mkBox(0.38, 0.28, 0.38, COL.hay);
+    b.position.y = 0; g.add(b);
+    const t = mkBox(0.28, 0.18, 0.28, COL.hayDark);
+    t.position.y = 0.22; g.add(t);
+    carryMesh = g;
+  } else if (type === 'apple') {
+    const g = new THREE.Group();
+    const a = mkSphere(0.2, COL.apple, 7);
+    a.position.y = 0.2; g.add(a);
+    const s = mkBox(0.04, 0.15, 0.04, 0x6B4226);
+    s.position.y = 0.42; g.add(s);
+    carryMesh = g;
+  } else {
+    carryMesh = null;
+  }
+  if (carryMesh) scene.add(carryMesh);
+}
+
+// =====================================================================
+// MONSTER SPAWN  — monsters patrol along Z (top↔bottom), perpendicular to player
+// =====================================================================
+function spawnMonsters() {
+  monsters.forEach(m => scene.remove(m.mesh));
+  monsters = [];
+
+  // Pick which X columns on the bridge have monsters
+  // Ramp: 1 col at lvl1, +1 col every 2 levels, max 8
+  const numCols = Math.min(Math.ceil(level / 2), BRIDGE_X1 - BRIDGE_X0);
+  const allCols = [];
+  for (let x = BRIDGE_X0; x < BRIDGE_X1; x++) allCols.push(x);
+  const cols = allCols.sort(() => Math.random() - 0.5).slice(0, numCols);
+
+  cols.forEach(laneX => {
+    // Double monsters per column only at high levels
+    const count = level >= 7 ? (Math.random() < 0.55 ? 2 : 1) : 1;
+    for (let k = 0; k < count; k++) {
+      const dir = Math.random() < 0.5 ? 1 : -1;
+      // Gentle speed ramp: starts slow, grows gradually
+      const baseSpeed = 1.3 + level * 0.15 + Math.random() * 0.5;
+      const type = Math.floor(Math.random() * 2);
+      const mesh = buildMonsterMesh(type);
+
+      // Monster eyes face +Z by default → rotate to match travel direction
+      mesh.rotation.y = dir > 0 ? 0 : Math.PI;
+
+      // Stagger starting Z so two monsters in same column aren't on top of each other
+      const zRange = BRIDGE_Z1 - BRIDGE_Z0;
+      const startZ = dir > 0
+        ? BRIDGE_Z0 - 1.5 - Math.random() * zRange - k * (zRange * 0.5)
+        : BRIDGE_Z1 + 1.5 + Math.random() * zRange + k * (zRange * 0.5);
+
+      mesh.position.set(laneX + 0.5, 0, startZ);
+      scene.add(mesh);
+
+      monsters.push({ mesh, x: laneX, dir, speed: baseSpeed, wz: startZ });
+    }
+  });
+}
+
+// =====================================================================
+// INIT GAME
+// =====================================================================
+function initGame(lvl) {
+  level = lvl;
+  score = 0;
+  carrying = null;
+  appleTimer = 0;
+  appleActive = false;
+  totalTime = 0;
+  moveTimer = 0;
+  movePath = [];
+  if (tapIndicator) { tapIndicator.visible = false; }
+  STATE = 'playing';
+
+  player = { x: P_START.x, z: P_START.z };
+
+  // Remove apple if exists
+  if (appleMesh) { scene.remove(appleMesh); appleMesh = null; }
+
+  // Clear horses (remove mesh, bar, pipRow)
+  horses.forEach(h => {
+    if (h.mesh) scene.remove(h.mesh);
+    if (h.barGroup) scene.remove(h.barGroup);
+    if (h.pipRow) scene.remove(h.pipRow);
+  });
+  horses = [];
+
+  // Carry mesh
+  buildCarryMesh(null);
+
+  // Build world
+  buildWorld();
+
+  // Spawn first horse (adult)
+  const s0 = HORSE_SLOTS[0];
+  horses.push(spawnHorse(s0.x + 0.5, s0.z + 0.5, true));
+
+  // Spawn monsters
+  spawnMonsters();
+
+  // Build player mesh
+  buildPlayerMesh();
+  updatePlayerPos();
+
+  // Update UI
+  updateHUD();
+  document.getElementById('score').textContent = '0';
+  document.getElementById('level-num').textContent = horses.length;
+  document.getElementById('apple-popup').style.display = 'none';
+  document.getElementById('level-up-banner').style.display = 'none';
+}
+
+// =====================================================================
+// UI
+// =====================================================================
+function updateHUD() {
+  const alive = horses.filter(h => !h.dead);
+  const adults = alive.filter(h => h.adult).length;
+  const foals  = alive.filter(h => !h.adult).length;
+  const dead   = horses.filter(h => h.dead).length;
+  document.getElementById('level-num').textContent = adults;
+  document.getElementById('foal-num').textContent  = foals;
+  document.getElementById('dead-num').textContent  = dead;
+}
+
+function updateCarryUI() {
+  const el = document.getElementById('carry-ui');
+  if (carrying === 'hay') el.textContent = '🌾 CARRYING HAY — FEED THE HORSES!';
+  else if (carrying === 'apple') el.textContent = '🍎 CARRYING APPLE — FEED FOR A FOAL!';
+  else el.textContent = '';
+}
+
+function showMsg(title, body, btnTxt, action) {
+  const o = document.getElementById('msg-overlay');
+  o.style.display = 'block';
+  o.innerHTML = `<h1>${title}</h1><p>${body}</p><button class="retro-btn" id="act-btn">${btnTxt}</button>`;
+  document.getElementById('act-btn').addEventListener('click', action);
+}
+
+function hideMsg() {
+  document.getElementById('msg-overlay').style.display = 'none';
+}
+
+function flashScreen(col = 'rgba(255,0,0,0.45)') {
+  const fl = document.getElementById('flash-overlay');
+  fl.style.background = col;
+  setTimeout(() => { fl.style.background = 'rgba(0,0,0,0)'; }, 120);
+}
+
+// =====================================================================
+// INPUT — tap/click to move
+// =====================================================================
+const raycaster = new THREE.Raycaster();
+const groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0); // y=0
+const tapTarget = new THREE.Vector3();   // world position of tap
+let movePath = [];   // queued grid steps [{dx,dz}, ...]
+let tapIndicator = null; // little marker showing tap destination
+
+function buildTapIndicator() {
+  const g = new THREE.Group();
+  const ring = mkBox(0.7, 0.04, 0.7, 0xF4D03F);
+  ring.position.y = 0.02;
+  g.add(ring);
+  const inner = mkBox(0.3, 0.04, 0.3, 0xffffff);
+  inner.position.y = 0.03;
+  g.add(inner);
+  return g;
+}
+
+function screenToGridCell(clientX, clientY) {
+  const ndcX = (clientX / window.innerWidth) * 2 - 1;
+  const ndcY = -(clientY / window.innerHeight) * 2 + 1;
+  raycaster.setFromCamera({ x: ndcX, y: ndcY }, camera);
+  const hit = new THREE.Vector3();
+  if (!raycaster.ray.intersectPlane(groundPlane, hit)) return null;
+  const gx = Math.floor(hit.x);
+  const gz = Math.floor(hit.z);
+  if (gx < 0 || gx >= GW || gz < 0 || gz >= GH) return null;
+  return { gx, gz };
+}
+
+function buildPathTo(tx, tz) {
+  // Simple greedy path: alternate X/Z steps toward target, respecting walls
+  // Uses tryMove logic to validate each step, backtracks on one axis if needed
+  const path = [];
+  let cx = player.x, cz = player.z;
+  const MAX = 40;
+  let steps = 0;
+  while ((cx !== tx || cz !== tz) && steps++ < MAX) {
+    const ddx = Math.sign(tx - cx);
+    const ddz = Math.sign(tz - cz);
+    // Prefer the axis with bigger gap
+    const tryOrder = Math.abs(tx - cx) >= Math.abs(tz - cz)
+      ? [[ddx, 0], [0, ddz]]
+      : [[0, ddz], [ddx, 0]];
+
+    let moved = false;
+    for (const [sdx, sdz] of tryOrder) {
+      if (sdx === 0 && sdz === 0) continue;
+      if (canMove(cx, cz, sdx, sdz)) {
+        path.push({ dx: sdx, dz: sdz });
+        cx += sdx; cz += sdz;
+        moved = true; break;
+      }
+    }
+    if (!moved) break; // blocked, stop
+  }
+  return path;
+}
+
+// Validate a move without actually applying it
+function canMove(fromX, fromZ, dx, dz) {
+  const nx = fromX + dx, nz = fromZ + dz;
+  if (nx < 0 || nx >= GW || nz < 0 || nz >= GH) return false;
+  const onBridgeX = nx >= BRIDGE_X0 && nx < BRIDGE_X1;
+  if (onBridgeX && (nz < BRIDGE_Z0 || nz > BRIDGE_Z1)) return false;
+  const crossingPenRight = (fromX < PEN_X1 && nx >= PEN_X1) || (fromX >= PEN_X1 && nx < PEN_X1);
+  if (crossingPenRight && (nz < GATE_Z0 || nz > GATE_Z1)) return false;
+  return true;
+}
+
+function handleTap(clientX, clientY) {
+  if (STATE !== 'playing') return;
+  const cell = screenToGridCell(clientX, clientY);
+  if (!cell) return;
+  movePath = buildPathTo(cell.gx, cell.gz);
+  // Show tap indicator
+  if (!tapIndicator) { tapIndicator = buildTapIndicator(); scene.add(tapIndicator); }
+  tapIndicator.position.set(cell.gx + 0.5, 0, cell.gz + 0.5);
+  tapIndicator.visible = true;
+  tapIndicator._fadeTimer = 0.7;
+}
+
+canvas.addEventListener('pointerdown', e => {
+  e.preventDefault();
+  handleTap(e.clientX, e.clientY);
+}, { passive: false });
+
+// Keyboard still works as fallback on desktop
+const KEYS = {};
+document.addEventListener('keydown', e => {
+  KEYS[e.key] = true;
+  if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].includes(e.key)) {
+    e.preventDefault();
+    // Convert key to a single-step path
+    if (STATE !== 'playing') return;
+    const dirs = {
+      'ArrowRight': {dx:1,dz:0}, 'd': {dx:1,dz:0}, 'D': {dx:1,dz:0},
+      'ArrowLeft':  {dx:-1,dz:0},'a': {dx:-1,dz:0},'A': {dx:-1,dz:0},
+      'ArrowUp':    {dx:0,dz:-1},'w': {dx:0,dz:-1},'W': {dx:0,dz:-1},
+      'ArrowDown':  {dx:0,dz:1}, 's': {dx:0,dz:1}, 'S': {dx:0,dz:1},
+    };
+    if (dirs[e.key]) movePath = [dirs[e.key]];
+  }
+});
+document.addEventListener('keyup', e => { KEYS[e.key] = false; });
+
+function tryMove(dx, dz) {
+  const nx = player.x + dx;
+  const nz = player.z + dz;
+
+  // Bounds
+  if (nx < 0 || nx >= GW || nz < 0 || nz >= GH) return false;
+
+  // Can't walk into water row on bridge edges
+  const onBridgeX = nx >= BRIDGE_X0 && nx < BRIDGE_X1;
+  if (onBridgeX && (nz < BRIDGE_Z0 || nz > BRIDGE_Z1)) return false;
+
+  // Can't pass through pen fence right side except at gate
+  const crossingPenRight = (player.x < PEN_X1 && nx >= PEN_X1) || (player.x >= PEN_X1 && nx < PEN_X1);
+  if (crossingPenRight && (nz < GATE_Z0 || nz > GATE_Z1)) return false;
+
+  // Can't pass through right-area left fence (open — same as bridge exit, no fence on left of right area)
+  // Actually the right area has no fence on its left (bridge side), so free movement
+
+  player.x = nx;
+  player.z = nz;
+  return true;
+}
+
+// =====================================================================
+// INTERACTIONS
+// =====================================================================
+function checkInteractions() {
+  const px = player.x, pz = player.z;
+  const pwx = px + 0.5, pwz = pz + 0.5;
+
+  // Pick up hay
+  if (!carrying && px === HAY.x && pz === HAY.z) {
+    carrying = 'hay';
+    buildCarryMesh('hay');
+    updateCarryUI();
+    addScore(10);
+    animateHayPulse();
+    return;
+  }
+
+  // Pick up apple
+  if (!carrying && appleActive && px === APPLE_POS.x && pz === APPLE_POS.z) {
+    carrying = 'apple';
+    appleActive = false;
+    scene.remove(appleMesh); appleMesh = null;
+    buildCarryMesh('apple');
+    updateCarryUI();
+    document.getElementById('apple-popup').style.display = 'none';
+    addScore(25);
+    return;
+  }
+
+  // Feed a horse — only if in the pen and carrying something
+  if (px < PEN_X1 && carrying) {
+    // Find the first alive horse within proximity
+    const FEED_RANGE = 1.1;
+    const target = horses.find(h =>
+      !h.dead && !h.dancing &&
+      Math.abs(h.wx - pwx) < FEED_RANGE &&
+      Math.abs(h.wz - pwz) < FEED_RANGE
+    );
+    if (!target) return;
+
+    if (carrying === 'hay') {
+      target.hunger = Math.min(100, target.hunger + 42);
+      target.feedCount = (target.feedCount || 0) + 1;
+      addScore(50);
+      carrying = null;
+      buildCarryMesh(null);
+      updateCarryUI();
+      animateHorseEat(target);
+      // Check foal graduation (10 feeds → adult)
+      if (!target.adult && target.feedCount >= 10) {
+        graduateFoal(target);
+      }
+
+    } else if (carrying === 'apple') {
+      if (target.adult) {
+        // Adult: spawn a baby!
+        target.hunger = Math.min(100, target.hunger + 20);
+        addScore(150);
+        carrying = null;
+        buildCarryMesh(null);
+        updateCarryUI();
+        spawnBaby();
+        animateHorseEat(target);
+        flashScreen('rgba(255,220,0,0.3)');
+      } else {
+        // Foal: does a little dance, lose the apple
+        target.dancing = true;
+        target.danceTimer = 2.0;
+        target.dancePhase = 0;
+        carrying = null;
+        buildCarryMesh(null);
+        updateCarryUI();
+        addScore(5); // consolation points
+        flashScreen('rgba(100,200,255,0.25)');
+      }
+    }
+  }
+}
+
+function spawnBaby() {
+  // Pick a random open spot inside the pen
+  const taken = new Set(horses.filter(h => !h.dead).map(h => `${Math.floor(h.wx)},${Math.floor(h.wz)}`));
+  let bwx, bwz;
+  let attempts = 0;
+  do {
+    bwx = 0.6 + Math.random() * 3.8;
+    bwz = 0.7 + Math.random() * 8.6;
+    attempts++;
+  } while (taken.has(`${Math.floor(bwx)},${Math.floor(bwz)}`) && attempts < 80);
+
+  const h = spawnHorse(bwx, bwz, false);
+  horses.push(h);
+  level = horses.filter(x => !x.dead).length;
+  updateHUD();
+
+  const banner = document.getElementById('level-up-banner');
+  banner.style.display = 'block';
+  setTimeout(() => { banner.style.display = 'none'; }, 3000);
+
+  spawnMonsters();
+  addScore(200);
+}
+
+function graduateFoal(h) {
+  // Remove old foal mesh and bar/pips, rebuild as adult in place
+  if (h.mesh)     scene.remove(h.mesh);
+  if (h.barGroup) scene.remove(h.barGroup);
+  if (h.pipRow)   { scene.remove(h.pipRow); h.pipRow = null; }
+
+  const gx = Math.floor(h.wx), gz = Math.floor(h.wz);
+  h.mesh     = buildHorseMesh(gx, gz, true);
+  h.barGroup = buildHungerBar();
+  scene.add(h.barGroup);
+  h.adult = true;
+  h.feedCount = 0;
+
+  // Burst flash
+  flashScreen('rgba(255,220,80,0.4)');
+  addScore(300);
+
+  const banner = document.getElementById('level-up-banner');
+  banner.textContent = '🐴 FOAL GREW UP! 🐴';
+  banner.style.display = 'block';
+  setTimeout(() => { banner.style.display = 'none'; banner.textContent = '🐴 NEW FOAL BORN! 🐴'; }, 2500);
+
+  updateHUD();
+}
+
+function animateHorseEat(h) {
+  if (!h || !h.mesh || h.dead) return;
+  const savedY = h.mesh.position.y;
+  let t = 0;
+  const bounce = setInterval(() => {
+    t += 0.06;
+    if (!h.mesh || h.dead) { clearInterval(bounce); return; }
+    h.mesh.position.y = savedY + Math.sin(t * Math.PI * 2) * 0.3 * Math.max(0, 1 - t);
+    if (t >= 1) { h.mesh.position.y = savedY; clearInterval(bounce); }
+  }, 30);
+}
+
+function animateHayPulse() {
+  if (!hayMesh) return;
+  const s = hayMesh.scale;
+  s.set(1.15, 1.15, 1.15);
+  setTimeout(() => s.set(1, 1, 1), 180);
+}
+
+function addScore(n) {
+  score += n;
+  document.getElementById('score').textContent = score;
+}
+
+// =====================================================================
+// COLLISION WITH MONSTERS — monsters move along Z, fixed X column
+// =====================================================================
+function checkMonsterHit() {
+  if (player.x < BRIDGE_X0 || player.x >= BRIDGE_X1) return false;
+  const px = player.x;       // which X column the player is on
+  const pwz = player.z + 0.5; // player world-Z center
+
+  for (const m of monsters) {
+    if (m.x !== px) continue;         // different column, safe
+    // Only dangerous if monster is within the bridge Z range
+    if (m.wz < BRIDGE_Z0 - 0.5 || m.wz > BRIDGE_Z1 + 0.5) continue;
+    if (Math.abs(m.wz - pwz) < 0.75) return true;
+  }
+  return false;
+}
+
+// =====================================================================
+// DEATH / GAME OVER
+// =====================================================================
+function playerDied() {
+  STATE = 'dead';
+  flashScreen('rgba(255,0,0,0.6)');
+  if (playerGroup) {
+    playerGroup.children.forEach(c => {
+      if (c.material) c.material.color.setHex(0xff0000);
+    });
+    // Spin & fall
+  }
+  setTimeout(() => {
+    showMsg(
+      '☠ YOU DIED!',
+      `A monster got you!<br><br>Score: ${score}<br>Horses fed: ${level - 1}`,
+      'TRY AGAIN',
+      () => { hideMsg(); initGame(1); }
+    );
+    STATE = 'gameover';
+  }, 900);
+}
+
+function horseStarved() {
+  if (STATE === 'gameover') return;
+  STATE = 'gameover';
+  flashScreen('rgba(0,0,200,0.4)');
+  setTimeout(() => {
+    const adults = horses.filter(h => h.adult).length;
+    showMsg(
+      '💀 HERD LOST!',
+      `All your horses starved!<br><br>Score: ${score}<br>Adults raised: ${adults}`,
+      'TRY AGAIN',
+      () => { hideMsg(); initGame(1); }
+    );
+  }, 600);
+}
+
+// =====================================================================
+// GAME LOOP
+// =====================================================================
+function loop(ts) {
+  requestAnimationFrame(loop);
+  const dt = Math.min((ts - lastTs) / 1000, 0.08);
+  lastTs = ts;
+  totalTime += dt;
+
+  if (STATE === 'playing') {
+    // Player movement — consume next step from movePath
+    moveTimer -= dt;
+    if (moveTimer <= 0 && movePath.length > 0) {
+      const mv = movePath[0];
+      const moved = tryMove(mv.dx, mv.dz);
+      if (moved) {
+        movePath.shift();
+        updatePlayerPos();
+        checkInteractions();
+        moveTimer = MOVE_DELAY;
+        if (playerGroup) {
+          playerGroup.position.y = 0.14;
+          setTimeout(() => { if (playerGroup) playerGroup.position.y = 0; }, 65);
+        }
+      } else {
+        movePath = []; // blocked, clear path
+      }
+    }
+
+    // Tap indicator fade
+    if (tapIndicator && tapIndicator.visible) {
+      tapIndicator._fadeTimer -= dt;
+      const s = Math.max(0, tapIndicator._fadeTimer / 0.7);
+      tapIndicator.scale.setScalar(0.6 + s * 0.4);
+      tapIndicator.children.forEach(c => { if (c.material) c.material.opacity = s; c.material && (c.material.transparent = true); });
+      tapIndicator.rotation.y += dt * 3;
+      if (tapIndicator._fadeTimer <= 0) tapIndicator.visible = false;
+    }
+
+    // Update monsters — move along Z (perpendicular to player crossing direction)
+    monsters.forEach((m, i) => {
+      m.wz += m.dir * m.speed * dt;
+      // Wrap around when they exit bridge Z bounds
+      if (m.dir > 0 && m.wz > BRIDGE_Z1 + 3)  m.wz = BRIDGE_Z0 - 3;
+      if (m.dir < 0 && m.wz < BRIDGE_Z0 - 3)  m.wz = BRIDGE_Z1 + 3;
+      m.mesh.position.z = m.wz;
+      // Slight bob
+      m.mesh.position.y = Math.sin(ts * 0.004 + i * 1.3) * 0.07;
+      // Leg walk cycle
+      const walkPhase = ts * 0.009 + i * 2.1;
+      if (m.mesh.children[0]) m.mesh.children[0].position.y = 0.15 + Math.sin(walkPhase) * 0.07;
+      if (m.mesh.children[1]) m.mesh.children[1].position.y = 0.15 + Math.sin(walkPhase + Math.PI) * 0.07;
+    });
+
+    // Check monster collision
+    if (checkMonsterHit()) playerDied();
+
+    // Update horses — wandering + hunger + bars + dance
+    const HORSE_SPEED = 1.4;
+    horses.forEach(h => {
+      if (h.dead) {
+        // Sink slowly and hide bar
+        if (h.mesh) h.mesh.position.y -= dt * 0.4;
+        if (h.barGroup) h.barGroup.visible = false;
+        if (h.pipRow) h.pipRow.visible = false;
+        return;
+      }
+
+      // Dance animation (foal got apple)
+      if (h.dancing) {
+        h.danceTimer -= dt;
+        h.dancePhase += dt * 12;
+        if (h.mesh) {
+          h.mesh.position.y = Math.abs(Math.sin(h.dancePhase)) * 0.55;
+          h.mesh.rotation.y = h.dancePhase * 1.2;
+          // Spin the bar too
+          if (h.barGroup) {
+            h.barGroup.position.set(h.mesh.position.x, 1.3, h.mesh.position.z);
+            h.barGroup.quaternion.copy(camera.quaternion);
+          }
+          if (h.pipRow) {
+            h.pipRow.position.set(h.mesh.position.x, 1.5, h.mesh.position.z);
+            h.pipRow.quaternion.copy(camera.quaternion);
+          }
+        }
+        if (h.danceTimer <= 0) {
+          h.dancing = false;
+          if (h.mesh) { h.mesh.position.y = 0; }
+        }
+        return; // skip normal movement while dancing
+      }
+
+      // Hunger drain
+      h.hunger = Math.max(0, h.hunger - HUNGER_RATE * dt);
+
+      // Death check
+      if (h.hunger <= 0 && !h.dead) {
+        h.dead = true;
+        if (h.mesh) h.mesh.children.forEach(c => { if (c.material) c.material.color.setHex(0x444444); });
+        flashScreen('rgba(0,0,150,0.3)');
+        updateHUD();
+        // Game over if ALL dead
+        if (horses.every(hh => hh.dead)) {
+          horseStarved();
+        }
+        return;
+      }
+
+      // Wander timer
+      h.wanderTimer -= dt;
+      if (h.wanderTimer <= 0) {
+        h.tx = 0.6 + Math.random() * 3.8;
+        h.tz = 0.7 + Math.random() * 8.6;
+        h.wanderTimer = 2.5 + Math.random() * 3.5;
+      }
+
+      // Move toward wander target
+      const hdx = h.tx - h.wx;
+      const hdz = h.tz - h.wz;
+      const hdist = Math.sqrt(hdx * hdx + hdz * hdz);
+      if (hdist > 0.05) {
+        const step = Math.min(HORSE_SPEED * dt, hdist);
+        h.wx += (hdx / hdist) * step;
+        h.wz += (hdz / hdist) * step;
+        if (h.mesh) {
+          h.mesh.rotation.y = Math.atan2(hdx, hdz) + Math.PI;
+          h.mesh.position.y = Math.abs(Math.sin(ts * 0.005 + h.wobble)) * 0.1;
+        }
+      } else {
+        if (h.mesh) {
+          h.mesh.position.y = Math.sin(ts * 0.0018 + h.wobble) * 0.04;
+          if (h.hunger < 30) h.mesh.rotation.y += Math.sin(ts * 0.006 + h.wobble) * 0.015;
+        }
+      }
+      if (h.mesh) {
+        h.mesh.position.x = h.wx;
+        h.mesh.position.z = h.wz;
+      }
+
+      // Update floating hunger bar
+      updateHungerBar(h, ts);
+    });
+
+    // Check starvation (all dead)
+    // (handled per-horse above — only triggers when last horse dies)
+
+    // Apple timer
+    appleTimer += dt;
+    if (appleTimer >= APPLE_INTERVAL && !appleActive) {
+      appleActive = true;
+      appleTimer = 0;
+      appleMesh = buildAppleMesh();
+      scene.add(appleMesh);
+      document.getElementById('apple-popup').style.display = 'block';
+    }
+
+    // Apple animation
+    if (appleMesh) {
+      appleMesh.position.y = Math.sin(ts * 0.004) * 0.12;
+      appleMesh.children.forEach((c, i) => {
+        if (i === 0) { c.rotation.y = ts * 0.001; }
+      });
+    }
+
+    // Hay pile bob
+    if (hayMesh) {
+      hayMesh.rotation.y = Math.sin(ts * 0.001) * 0.04;
+    }
+
+    // Carrying mesh: float above player head
+    if (carryMesh) {
+      carryMesh.position.set(player.x + 0.5, 1.72 + Math.sin(ts * 0.005) * 0.06, player.z + 0.5);
+      carryMesh.rotation.y += dt * 1.5;
+    }
+
+    // Player mesh
+    if (playerGroup) {
+      playerGroup.rotation.y = Math.sin(ts * 0.002) * 0.04;
+      // Arm swing when moving
+    }
+
+    // Stars twinkle
+    starsGroup.children.forEach((s, i) => {
+      const scale = 0.7 + Math.sin(ts * 0.003 + i) * 0.3;
+      s.scale.setScalar(scale);
+    });
+
+    updateHUD();
+  }
+
+  renderer.render(scene, camera);
+}
+
+// =====================================================================
+// START
+// =====================================================================
+document.getElementById('start-btn').addEventListener('click', () => {
+  hideMsg();
+  initGame(1);
+});
+
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+lastTs = performance.now();
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>

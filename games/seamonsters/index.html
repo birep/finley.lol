@@ -1,0 +1,1161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>HAY RUNNER</title>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:#0d0d1a; overflow:hidden; font-family:'Press Start 2P',monospace; }
+#gameCanvas { display:block; }
+body::after {
+  content:''; position:fixed; top:0; left:0; width:100%; height:100%;
+  background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.07) 2px,rgba(0,0,0,0.07) 4px);
+  pointer-events:none; z-index:999;
+}
+#ui { position:absolute; top:0; left:0; width:100%; pointer-events:none; color:#fff; }
+#hud {
+  display:flex; justify-content:space-between; align-items:flex-start;
+  padding:8px 16px; background:rgba(0,0,0,0.85);
+  border-bottom:3px solid #4a7c59; gap:14px; flex-wrap:wrap;
+}
+#hud-left  { display:flex; flex-direction:column; gap:5px; }
+#hud-mid   { display:flex; flex-direction:column; gap:4px; align-items:center; }
+#hud-right { text-align:right; }
+.level-badge { font-size:9px; color:#F4D03F; text-shadow:2px 2px #000; }
+.herd-detail { font-size:7px; color:#aaa; }
+.score-label { font-size:7px; color:#aaa; }
+.score-val   { font-size:13px; color:#F4D03F; text-shadow:2px 2px #000; }
+#shelter-ui { display:flex; flex-direction:column; gap:3px; }
+.s-label { font-size:7px; color:#c8a44a; }
+.s-bar-bg { width:80px; height:8px; background:#222; border:1px solid #555; }
+.s-bar-fill { height:100%; background:#c8a44a; transition:width 0.4s; }
+#storm-bar {
+  position:absolute; top:70px; left:50%; transform:translateX(-50%);
+  text-align:center; display:none;
+}
+#storm-bar .sw-text { font-size:10px; color:#ff8800; text-shadow:2px 2px #000; animation:stpulse 0.6s ease-in-out infinite; }
+#storm-bar .sw-timer { font-size:8px; color:#ffbb44; margin-top:4px; }
+@keyframes stpulse { 0%,100%{opacity:1} 50%{opacity:0.45} }
+#chop-hint {
+  position:absolute; bottom:52px; left:50%; transform:translateX(-50%);
+  font-size:8px; color:#a0c87a; text-shadow:2px 2px #000; display:none; text-align:center;
+}
+#carry-ui {
+  position:absolute; bottom:22px; left:50%; transform:translateX(-50%);
+  font-size:10px; color:#F4D03F; text-shadow:2px 2px #000; text-align:center;
+  animation:pulse 1s ease-in-out infinite;
+}
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.55} }
+#msg-overlay {
+  position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+  background:rgba(0,0,0,0.93); border:3px solid #4a7c59;
+  box-shadow:0 0 30px rgba(74,124,89,0.5);
+  padding:28px 38px; text-align:center; min-width:330px;
+}
+#msg-overlay h1 { font-size:19px; color:#F4D03F; margin-bottom:14px; text-shadow:3px 3px #8B4513; letter-spacing:2px; }
+#msg-overlay p  { font-size:8px; line-height:2.2; color:#ddd; margin-bottom:18px; }
+#msg-overlay .sub { font-size:7px; color:#aaa; margin-top:-8px; margin-bottom:16px; }
+.retro-btn {
+  font-family:'Press Start 2P',monospace; font-size:10px; background:#4a7c59; color:#fff;
+  border:none; padding:10px 20px; cursor:pointer; pointer-events:all;
+  box-shadow:3px 3px #1a3d27; transition:transform 0.1s;
+}
+.retro-btn:hover { background:#5a9c69; transform:translate(-1px,-1px); }
+.retro-btn:active { transform:translate(2px,2px); box-shadow:1px 1px #1a3d27; }
+#flash-overlay {
+  position:fixed; top:0; left:0; width:100%; height:100%;
+  background:rgba(0,0,0,0); pointer-events:none; z-index:500; transition:background 0.05s;
+}
+#apple-popup {
+  position:absolute; top:125px; right:22px; font-size:9px; color:#E74C3C;
+  text-shadow:2px 2px #000; display:none; animation:bounce 0.5s ease infinite alternate;
+}
+@keyframes bounce { from{transform:translateY(0)} to{transform:translateY(-6px)} }
+#event-banner {
+  position:absolute; top:84px; left:50%; transform:translateX(-50%);
+  font-size:11px; color:#F4D03F; text-shadow:3px 3px #000; display:none;
+  white-space:nowrap;
+}
+#controls-hint { position:absolute; bottom:6px; right:14px; font-size:6px; color:#444; }
+</style>
+</head>
+<body>
+<canvas id="gameCanvas"></canvas>
+<div id="flash-overlay"></div>
+<div id="ui">
+  <div id="hud">
+    <div id="hud-left">
+      <div class="level-badge">🐴 ADULTS: <span id="adult-num">1</span> &nbsp; 🐎 FOALS: <span id="foal-num">0</span></div>
+      <div class="herd-detail">💀 DEAD: <span id="dead-num">0</span></div>
+    </div>
+    <div id="hud-mid">
+      <div id="shelter-ui">
+        <div class="s-label">🏚 SHELTER: <span id="shelter-logs">0/4 logs</span></div>
+        <div class="s-bar-bg"><div class="s-bar-fill" id="shelter-bar" style="width:0%"></div></div>
+      </div>
+    </div>
+    <div id="hud-right">
+      <div class="score-label">SCORE</div>
+      <div class="score-val" id="score">0</div>
+    </div>
+  </div>
+  <div id="storm-bar">
+    <div class="sw-text" id="storm-text">⛈ STORM APPROACHING! ⛈</div>
+    <div class="sw-timer">TIME: <span id="storm-countdown">--</span>s</div>
+  </div>
+  <div id="carry-ui"></div>
+  <div id="chop-hint">🪓 WALK NEAR TREES TO CHOP · BRING LOGS TO SHELTER ZONE</div>
+  <div id="apple-popup">🍎 BONUS APPLE!</div>
+  <div id="event-banner"></div>
+  <div id="msg-overlay">
+    <h1>HAY RUNNER</h1>
+    <p>
+      🌾 Cross the BRIDGE · collect HAY · feed horses<br>
+      🍎 Feed APPLE to an ADULT → new foal born!<br>
+      🐎 Foals grow up after 10 feeds (adults only make babies)<br>
+      🌊 SEA MONSTERS leap from the river onto the bridge!<br>
+      🪓 Chop TREES on the right · carry LOGS to shelter zone<br>
+      ⛈ Storms blow away foals if there's no shelter!
+    </p>
+    <div class="sub">TAP ANYWHERE TO MOVE · ARROW KEYS ALSO WORK</div>
+    <button class="retro-btn" id="start-btn">▶ START GAME</button>
+  </div>
+  <div id="controls-hint">TAP TO MOVE</div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+// ===================================================================
+// CONSTANTS
+// ===================================================================
+const GW=21, GH=11;
+const PEN_X1=5;
+const BRIDGE_X0=5, BRIDGE_X1=15;
+const RIGHT_X0=15;
+const GATE_Z0=3, GATE_Z1=7;
+const BRIDGE_Z0=1, BRIDGE_Z1=9;
+const HAY_POS   = {x:19,z:5};
+const APPLE_POS = {x:17,z:3};
+const P_START   = {x:2, z:5};
+
+const TREE_DEFS = [{x:16,z:1},{x:16,z:9},{x:20,z:2},{x:20,z:8}];
+const SHELTER_X=0, SHELTER_Z=4; // 2x2 zone
+const LOGS_NEEDED  = 4;
+const CHOPS_NEEDED = 2;
+
+const HUNGER_RATE   = 0.88;
+const APPLE_INTERVAL= 32;
+const MOVE_DELAY    = 0.13;
+
+const S_CLEAR=60, S_WARN=22, S_STORM=10, S_RECOVER=8;
+
+const HORSE_SLOTS=[{x:1,z:3},{x:3,z:2},{x:1,z:7},{x:3,z:8},{x:3,z:6},{x:2,z:1},{x:1,z:9}];
+
+const COL={
+  sky:0x0d0d1a, stormSky:0x07070e,
+  pen:0x3a5e3a, right:0x3a5e3a,
+  water:0x0e2244, waterShim:0x1a3a6a,
+  bridge:0x9B7040, bridgeAlt:0xB8864E,
+  fence:0x8B5A1A, fenceRail:0x7a4e15,
+  player:0xe8a87c, playerTop:0x8B2500,
+  horse:0x8B5E3C, babyHorse:0xC9A06A,
+  hay:0xF4D03F, hayDark:0xC9972A,
+  apple:0xE74C3C, appleLeaf:0x2ecc40,
+  tree:0x2d5a27, treeTrunk:0x6B4226,
+  log:0x9B6B30,
+  shelter:0xA07830, shelterRoof:0x6B4820,
+  star:0xffffff,
+  rain:0x334466,
+};
+
+// ===================================================================
+// THREE.JS SETUP
+// ===================================================================
+const canvas=document.getElementById('gameCanvas');
+const renderer=new THREE.WebGLRenderer({canvas,antialias:false});
+renderer.setSize(window.innerWidth,window.innerHeight);
+renderer.setClearColor(COL.sky);
+renderer.setPixelRatio(Math.min(window.devicePixelRatio,1.5));
+
+const scene=new THREE.Scene();
+scene.fog=new THREE.Fog(COL.sky,22,40);
+
+const camera=new THREE.PerspectiveCamera(48,window.innerWidth/window.innerHeight,0.1,100);
+camera.position.set(10,14,17);
+camera.lookAt(10,0,5);
+
+const ambLight = new THREE.AmbientLight(0x8899aa,0.7); scene.add(ambLight);
+const sunLight = new THREE.DirectionalLight(0xfff4e0,1.1); sunLight.position.set(8,12,6); scene.add(sunLight);
+const moonLight= new THREE.DirectionalLight(0x2244aa,0.35); moonLight.position.set(-6,8,-4); scene.add(moonLight);
+const strmLight= new THREE.DirectionalLight(0x334488,0); strmLight.position.set(0,10,0); scene.add(strmLight);
+
+// ===================================================================
+// HELPERS
+// ===================================================================
+function mkBox(w,h,d,col){
+  return new THREE.Mesh(new THREE.BoxGeometry(w,h,d),new THREE.MeshLambertMaterial({color:col}));
+}
+function mkSphere(r,col,seg=6){
+  return new THREE.Mesh(new THREE.SphereGeometry(r,seg,seg),new THREE.MeshLambertMaterial({color:col}));
+}
+
+// ===================================================================
+// GAME STATE
+// ===================================================================
+let STATE='menu';
+let player={x:0,z:0};
+let carrying=null;
+let horses=[], monsters=[], trees=[];
+let shelter={logs:0,health:100,mesh:null};
+let level=1, score=0;
+let appleTimer=0, appleActive=false;
+let moveTimer=0, lastTs=0, totalTime=0;
+let stormPhase='clear', stormTimer=S_CLEAR;
+let rainParticles=[];
+let playerGroup=null, carryMesh=null, appleMesh=null, hayMesh=null;
+
+const worldGroup=new THREE.Group(); scene.add(worldGroup);
+const rainGroup =new THREE.Group(); scene.add(rainGroup);
+
+// Stars
+const starsGroup=new THREE.Group(); scene.add(starsGroup);
+for(let i=0;i<120;i++){
+  const s=mkBox(0.1,0.1,0.1,COL.star);
+  s.position.set((Math.random()-0.5)*44+10,8+Math.random()*12,(Math.random()-0.5)*44+5);
+  starsGroup.add(s);
+}
+
+// ===================================================================
+// WORLD BUILDING
+// ===================================================================
+function buildWorld(){
+  while(worldGroup.children.length) worldGroup.remove(worldGroup.children[0]);
+
+  addGround(PEN_X1/2,GH/2,PEN_X1,GH,COL.pen);
+  addGround((RIGHT_X0+GW)/2,GH/2,GW-RIGHT_X0,GH,COL.right);
+
+  // Water
+  const wb=new THREE.Mesh(new THREE.PlaneGeometry(BRIDGE_X1-BRIDGE_X0,GH),new THREE.MeshLambertMaterial({color:COL.water}));
+  wb.rotation.x=-Math.PI/2; wb.position.set((BRIDGE_X0+BRIDGE_X1)/2,-0.05,GH/2); worldGroup.add(wb);
+  for(let z=0;z<GH;z++){
+    const s=mkBox(BRIDGE_X1-BRIDGE_X0,0.02,0.55,z%2===0?COL.waterShim:COL.water);
+    s.position.set((BRIDGE_X0+BRIDGE_X1)/2,-0.03,z+0.7); worldGroup.add(s);
+  }
+
+  // Bridge planks
+  for(let z=BRIDGE_Z0;z<=BRIDGE_Z1;z++)
+    for(let x=BRIDGE_X0;x<BRIDGE_X1;x++){
+      const p=mkBox(0.94,0.13,0.94,(x+z)%2===0?COL.bridge:COL.bridgeAlt);
+      p.position.set(x+0.5,0.01,z+0.5); worldGroup.add(p);
+    }
+  for(let x=BRIDGE_X0;x<BRIDGE_X1;x++){
+    const r1=mkBox(0.88,0.3,0.1,COL.fence); r1.position.set(x+0.5,0.2,BRIDGE_Z0-0.5); worldGroup.add(r1);
+    const r2=mkBox(0.88,0.3,0.1,COL.fence); r2.position.set(x+0.5,0.2,BRIDGE_Z1+0.5); worldGroup.add(r2);
+  }
+
+  buildPenFence(); buildRightFence();
+
+  // Shelter zone marker (mossy paving)
+  for(let sx=0;sx<2;sx++) for(let sz=0;sz<2;sz++){
+    const pave=mkBox(0.9,0.02,0.9,0x4a6040);
+    pave.position.set(SHELTER_X+sx+0.5,0.005,SHELTER_Z+sz+0.5); worldGroup.add(pave);
+  }
+  // Small sign post marking shelter zone
+  const sp=mkBox(0.1,0.55,0.1,COL.fence); sp.position.set(SHELTER_X+1,0.275,SHELTER_Z-0.5); worldGroup.add(sp);
+  const sign=mkBox(0.55,0.28,0.06,0x5a3010); sign.position.set(SHELTER_X+1,0.6,SHELTER_Z-0.5); worldGroup.add(sign);
+  const signText=mkBox(0.38,0.14,0.04,0x3a1a00); signText.position.set(SHELTER_X+1,0.6,SHELTER_Z-0.48); worldGroup.add(signText);
+
+  // Hay pile
+  hayMesh=buildHayPile(HAY_POS.x,HAY_POS.z); worldGroup.add(hayMesh);
+
+  // Pen corner posts
+  [[0,0],[0,10],[4,0],[4,10]].forEach(([px,pz])=>{
+    const post=mkBox(0.22,1.1,0.22,COL.fence); post.position.set(px+0.5,0.55,pz+0.5); worldGroup.add(post);
+  });
+  // Water rocks
+  [[6.5,0.4],[9.2,10.2],[12.7,0.3],[11,10.4]].forEach(([rx,rz])=>{
+    const rock=mkBox(0.38,0.18,0.32,0x445566); rock.position.set(rx,0.04,rz); worldGroup.add(rock);
+  });
+}
+
+function addGround(cx,cz,w,h,col){
+  const g=new THREE.Mesh(new THREE.PlaneGeometry(w,h),new THREE.MeshLambertMaterial({color:col}));
+  g.rotation.x=-Math.PI/2; g.position.set(cx,-0.01,cz); worldGroup.add(g);
+  const dk=new THREE.Color(col).multiplyScalar(0.88);
+  for(let i=0;i<=w;i++){const l=mkBox(0.04,0.001,h,dk.getHex());l.position.set(cx-w/2+i,0,cz);worldGroup.add(l);}
+}
+
+function buildPenFence(){
+  const H=0.65,W=0.12;
+  for(let x=0;x<=5;x++){addPost(x,0,H,W);addPost(x,GH,H,W);}
+  for(let z=0;z<=10;z++) addPost(0,z,H,W);
+  for(let z=0;z<=10;z++){if(z>=GATE_Z0&&z<=GATE_Z1)continue;addPost(5,z,H,W);}
+  [GATE_Z0,GATE_Z1].forEach(gz=>{const gp=mkBox(0.2,0.85,0.2,COL.fence);gp.position.set(5,0.425,gz);worldGroup.add(gp);});
+  [[PEN_X1/2,0.3,0,PEN_X1,0.07,W],[PEN_X1/2,0.5,0,PEN_X1,0.07,W],
+   [PEN_X1/2,0.3,GH,PEN_X1,0.07,W],[PEN_X1/2,0.5,GH,PEN_X1,0.07,W],
+   [0,0.3,GH/2,W,0.07,GH],[0,0.5,GH/2,W,0.07,GH]
+  ].forEach(([rx,ry,rz,rw,rh,rd])=>{const r=mkBox(rw,rh,rd,COL.fenceRail);r.position.set(rx,ry,rz);worldGroup.add(r);});
+}
+
+function buildRightFence(){
+  const W=0.12,H=0.65;
+  for(let x=RIGHT_X0;x<=GW;x++){addPost(x,0,H,W);addPost(x,GH,H,W);}
+  for(let z=0;z<=GH;z++) addPost(GW,z,H,W);
+  const w=GW-RIGHT_X0,cx=RIGHT_X0+w/2;
+  [[cx,0,w,W],[cx,GH,w,W],[GW,GH/2,W,GH]].forEach(([rx,rz,rw,rd])=>{
+    const r=mkBox(rw,0.07,rd,COL.fenceRail);r.position.set(rx,0.4,rz);worldGroup.add(r);
+  });
+}
+
+function addPost(x,z,H,W){const p=mkBox(W,H,W,COL.fence);p.position.set(x,H/2,z);worldGroup.add(p);}
+
+function buildHayPile(hx,hz){
+  const g=new THREE.Group();
+  const base=mkBox(1.1,0.55,1.1,COL.hay);base.position.y=0.275;g.add(base);
+  const mid=mkBox(0.85,0.38,0.85,COL.hayDark);mid.position.y=0.74;g.add(mid);
+  const top=mkBox(0.55,0.28,0.55,COL.hay);top.position.y=1.03;g.add(top);
+  for(let i=0;i<5;i++){const s=mkBox(0.05,0.05,1.1,COL.hayDark);s.position.set((Math.random()-0.5)*0.7,0.55+i*0.04,0);s.rotation.y=Math.random()*0.4;g.add(s);}
+  g.position.set(hx+0.5,0,hz+0.5); return g;
+}
+
+// ===================================================================
+// TREE / LOG / SHELTER SYSTEM
+// ===================================================================
+function initTrees(){
+  trees.forEach(t=>{if(t.mesh)scene.remove(t.mesh);if(t.logMesh)scene.remove(t.logMesh);});
+  trees=[];
+  TREE_DEFS.forEach(({x,z})=>{
+    const mesh=buildTreeMesh(x,z);
+    trees.push({x,z,chops:0,felled:false,mesh,logMesh:null,logOnGround:false,chopAnim:0});
+  });
+}
+
+function buildTreeMesh(x,z){
+  const g=new THREE.Group();
+  const trunk=mkBox(0.32,1.0,0.32,COL.treeTrunk);trunk.position.y=0.5;g.add(trunk);
+  const leaves=mkBox(0.98,1.0,0.98,COL.tree);leaves.position.y=1.25;g.add(leaves);
+  const top=mkBox(0.6,0.62,0.6,0x3a6a30);top.position.y=1.88;g.add(top);
+  // Chop marker (axe notch)
+  const notch=mkBox(0.3,0.08,0.05,0x8B4513);notch.position.set(0,0.55,0.18);g.add(notch);
+  g.position.set(x+0.5,0,z+0.5);
+  scene.add(g); return g;
+}
+
+function buildLogMesh(x,z){
+  const g=new THREE.Group();
+  const body=mkBox(0.72,0.28,0.28,COL.log);body.position.y=0.14;g.add(body);
+  const endA=mkBox(0.28,0.28,0.05,0x7a5020);endA.position.set(-0.36,0.14,0);g.add(endA);
+  const endB=mkBox(0.28,0.28,0.05,0x7a5020);endB.position.set(0.36,0.14,0);g.add(endB);
+  const ring=mkBox(0.26,0.26,0.03,0x9B6B30);ring.position.set(0.36,0.14,0.03);g.add(ring);
+  g.position.set(x+0.5,0,z+0.5);
+  scene.add(g); return g;
+}
+
+function tryChopAdjacent(){
+  const px=player.x,pz=player.z;
+  trees.forEach(t=>{
+    if(t.felled) return;
+    const dx=t.x-px, dz=t.z-pz;
+    // Adjacent (not diagonal, not same cell since trees block movement)
+    if(Math.abs(dx)+Math.abs(dz)===1){
+      t.chops++;
+      t.chopAnim=0.45;
+      if(t.chops>=CHOPS_NEEDED){
+        t.felled=true;
+        scene.remove(t.mesh); t.mesh=null;
+        t.logMesh=buildLogMesh(t.x,t.z);
+        t.logOnGround=true;
+        addScore(15);
+        showBanner('🪓 TIMBER! Pick up the LOG');
+      }
+    }
+  });
+}
+
+function initShelter(){
+  if(shelter.mesh){scene.remove(shelter.mesh);shelter.mesh=null;}
+  shelter.logs=0; shelter.health=100;
+  updateShelterUI();
+}
+
+function depositLog(){
+  shelter.logs=Math.min(LOGS_NEEDED,shelter.logs+1);
+  addScore(30);
+  updateShelterUI();
+  if(shelter.logs>=LOGS_NEEDED){
+    buildShelterMesh();
+    if(shelter.health<=0) shelter.health=100;
+    showBanner('🏚 SHELTER BUILT! Foals are safe from storms!');
+    addScore(100);
+  } else {
+    showBanner('🪵 Log deposited! ('+(shelter.logs)+'/'+LOGS_NEEDED+')');
+  }
+}
+
+function buildShelterMesh(){
+  if(shelter.mesh){scene.remove(shelter.mesh);}
+  const g=new THREE.Group();
+  const floor=mkBox(2.1,0.1,2.1,COL.shelter);floor.position.set(1,0.05,5);g.add(floor);
+  [[0.2,4.85],[0.2,5.15],[1.8,4.85],[1.8,5.15]].forEach(([px,pz])=>{
+    const post=mkBox(0.18,1.2,0.18,COL.shelter);post.position.set(px,0.65,pz);g.add(post);
+  });
+  const hpct=Math.max(0,shelter.health)/100;
+  const roofCol=hpct>0.5?COL.shelterRoof:0x8B2200;
+  const roof=mkBox(2.4,0.14,2.4,roofCol);roof.rotation.x=0.2;roof.position.set(1,1.34,5.08);g.add(roof);
+  const ridge=mkBox(0.12,0.12,2.5,0x5a3010);ridge.position.set(1,1.45,5);g.add(ridge);
+  const wallA=mkBox(0.08,0.88,2.1,0x7a5020);wallA.position.set(0.14,0.49,5);g.add(wallA);
+  scene.add(g); shelter.mesh=g;
+}
+
+function updateShelterUI(){
+  const built=shelter.logs>=LOGS_NEEDED&&shelter.health>0;
+  document.getElementById('shelter-logs').textContent=
+    built?('HP '+Math.round(shelter.health)+'%'):(shelter.logs+'/'+LOGS_NEEDED+' logs');
+  const pct=built?shelter.health:(shelter.logs/LOGS_NEEDED*100);
+  document.getElementById('shelter-bar').style.width=pct+'%';
+  document.getElementById('shelter-bar').style.background=
+    built?(shelter.health>50?'#c8a44a':'#cc4422'):'#668844';
+}
+
+// ===================================================================
+// STORM SYSTEM
+// ===================================================================
+function updateStorm(dt){
+  stormTimer-=dt;
+  const stormBar=document.getElementById('storm-bar');
+  const stormText=document.getElementById('storm-text');
+
+  if(stormPhase==='clear'){
+    if(stormTimer<=0){stormPhase='warning';stormTimer=S_WARN;stormBar.style.display='block';}
+    tweenSky(0);
+  } else if(stormPhase==='warning'){
+    const t=stormTimer/S_WARN;
+    document.getElementById('storm-countdown').textContent=Math.ceil(stormTimer);
+    tweenSky(1-t);
+    ambLight.intensity=0.7-0.5*(1-t);
+    sunLight.intensity=1.1-1.0*(1-t);
+    strmLight.intensity=(1-t)*0.65;
+    if(stormTimer<=0){stormPhase='storm';stormTimer=S_STORM;stormText.textContent='⚡ STORM! ⚡';spawnRain();applyStorm();}
+  } else if(stormPhase==='storm'){
+    document.getElementById('storm-countdown').textContent=Math.ceil(stormTimer);
+    tweenSky(1);
+    ambLight.intensity=0.2;sunLight.intensity=0.1;strmLight.intensity=0.7;
+    updateRain(dt);
+    if(stormTimer<=0){stormPhase='recovering';stormTimer=S_RECOVER;clearRain();stormText.textContent='🌤 CLEARING...';}
+  } else if(stormPhase==='recovering'){
+    const t=stormTimer/S_RECOVER;
+    tweenSky(1-t);
+    ambLight.intensity=0.2+0.5*t;sunLight.intensity=0.1+t;strmLight.intensity=0.7*(1-t);
+    if(stormTimer<=0){stormPhase='clear';stormTimer=S_CLEAR;stormBar.style.display='none';stormText.textContent='⛈ STORM APPROACHING! ⛈';}
+  }
+}
+
+function tweenSky(t){
+  const from=new THREE.Color(COL.sky),to=new THREE.Color(COL.stormSky);
+  const c=from.lerp(to,t);
+  scene.fog.color.copy(c);renderer.setClearColor(c);
+}
+
+function applyStorm(){
+  flashScreen('rgba(80,80,255,0.55)');
+  const shelterStanding=shelter.logs>=LOGS_NEEDED&&shelter.health>0;
+  if(shelterStanding){
+    shelter.health=Math.max(0,shelter.health-55);
+    if(shelter.health<=0){
+      scene.remove(shelter.mesh);shelter.mesh=null;shelter.logs=0;
+      showBanner('🏚 SHELTER DESTROYED! Rebuild with logs!');addScore(-50);
+    } else {
+      showBanner('⛈ SHELTER HELD! HP: '+Math.round(shelter.health)+'%');addScore(60);
+    }
+    updateShelterUI();
+  } else {
+    const foals=horses.filter(h=>!h.dead&&!h.adult);
+    if(foals.length>0){
+      foals.forEach(h=>{h.dead=true;if(h.mesh)h.mesh.children.forEach(c=>{if(c.material)c.material.color.setHex(0x6688ff);});});
+      showBanner('⛈ '+foals.length+' FOAL'+(foals.length>1?'S':'')+' BLOWN AWAY! BUILD A SHELTER!');
+      updateHUD();
+    } else {
+      showBanner('⛈ STORM PASSED · Build a shelter to protect foals!');
+    }
+  }
+}
+
+function spawnRain(){
+  clearRain();
+  for(let i=0;i<90;i++){
+    const d=mkBox(0.04,0.48,0.04,COL.rain);
+    d.position.set((Math.random()-0.5)*30+10,8+Math.random()*7,(Math.random()-0.5)*24+5);
+    d._vy=-(4.5+Math.random()*3.5);
+    rainGroup.add(d); rainParticles.push(d);
+  }
+}
+function updateRain(dt){
+  rainParticles.forEach(r=>{
+    r.position.y+=r._vy*dt; r.position.x-=0.4*dt;
+    if(r.position.y<-1){r.position.y=15;r.position.x=(Math.random()-0.5)*30+10;}
+  });
+}
+function clearRain(){rainParticles.forEach(r=>rainGroup.remove(r));rainParticles=[];}
+
+// ===================================================================
+// PLAYER MESH
+// ===================================================================
+function buildPlayerMesh(){
+  if(playerGroup) scene.remove(playerGroup);
+  const g=new THREE.Group();
+  [-0.13,0.13].forEach(ox=>{const l=mkBox(0.18,0.32,0.18,0x3a5f8a);l.position.set(ox,0.16,0);g.add(l);});
+  const body=mkBox(0.52,0.55,0.38,0xd4754d);body.position.y=0.58;g.add(body);
+  mkBox(0.16,0.14,0.06,0x2a4a6a) && (() => { const pk=mkBox(0.16,0.14,0.06,0x2a4a6a);pk.position.set(-0.14,0.6,0.2);g.add(pk);})();
+  [-0.33,0.33].forEach(ox=>{const a=mkBox(0.15,0.42,0.15,COL.player);a.position.set(ox,0.52,0);g.add(a);});
+  const head=mkBox(0.42,0.42,0.42,COL.player);head.position.y=1.06;g.add(head);
+  [-0.1,0.1].forEach(ox=>{const e=mkBox(0.08,0.08,0.06,0x000000);e.position.set(ox,1.1,0.22);g.add(e);});
+  const hb=mkBox(0.65,0.06,0.65,COL.playerTop);hb.position.y=1.3;g.add(hb);
+  const hc=mkBox(0.42,0.28,0.42,COL.playerTop);hc.position.y=1.49;g.add(hc);
+  const band=mkBox(0.44,0.06,0.44,0xaa3300);band.position.y=1.35;g.add(band);
+  playerGroup=g; scene.add(g);
+}
+function updatePlayerPos(){if(playerGroup)playerGroup.position.set(player.x+0.5,0,player.z+0.5);}
+
+// ===================================================================
+// HORSE MESH + BAR SYSTEM
+// ===================================================================
+function buildHorseMesh(wx,wz,adult){
+  const g=new THREE.Group();
+  const s=adult?1.0:0.58,col=adult?COL.horse:COL.babyHorse,dark=adult?0x5a3a1a:0x9a6a3a;
+  [[-0.2,-0.14],[-0.2,0.14],[0.2,-0.14],[0.2,0.14]].forEach(([lx,lz])=>{
+    const l=mkBox(0.12*s,0.38*s,0.12*s,col);l.position.set(lx*s,0.19*s,lz*s);g.add(l);
+  });
+  const body=mkBox(0.75*s,0.45*s,0.42*s,col);body.position.y=0.52*s;g.add(body);
+  const neck=mkBox(0.22*s,0.38*s,0.22*s,col);neck.position.set(0.3*s,0.72*s,0);g.add(neck);
+  const head=mkBox(0.32*s,0.3*s,0.28*s,col);head.position.set(0.48*s,0.88*s,0);g.add(head);
+  const snout=mkBox(0.22*s,0.18*s,0.22*s,col);snout.position.set(0.65*s,0.76*s,0);g.add(snout);
+  [0.06,-0.06].forEach(oz=>{const n=mkBox(0.06*s,0.04*s,0.05*s,dark);n.position.set(0.76*s,0.78*s,oz);g.add(n);});
+  [0.15,-0.15].forEach(oz=>{const e=mkBox(0.06*s,0.07*s,0.05*s,0x000000);e.position.set(0.55*s,0.92*s,oz);g.add(e);});
+  [0.11,-0.11].forEach(oz=>{const ear=mkBox(0.08*s,0.14*s,0.07*s,col);ear.position.set(0.42*s,1.03*s,oz);g.add(ear);});
+  for(let i=0;i<4;i++){const mane=mkBox(0.1*s,0.14*s,0.38*s,dark);mane.position.set((0.2+i*0.12)*s,(0.78+i*0.04)*s,0);g.add(mane);}
+  const tail=mkBox(0.1*s,0.44*s,0.1*s,dark);tail.position.set(-0.38*s,0.52*s,0);g.add(tail);
+  const tailTip=mkBox(0.14*s,0.2*s,0.14*s,dark);tailTip.position.set(-0.42*s,0.24*s,0);g.add(tailTip);
+  g.position.set(wx,0,wz); scene.add(g); return g;
+}
+
+const BAR_W=0.72,BAR_H=0.1;
+function buildHungerBar(){
+  const g=new THREE.Group();
+  const bg=mkBox(BAR_W+0.06,BAR_H+0.04,0.04,0x111111);g.add(bg);
+  const fill=mkBox(BAR_W,BAR_H,0.05,0x44cc55);fill._isBarFill=true;g.add(fill);
+  const cL=mkBox(0.03,BAR_H+0.06,0.06,0x000000);cL.position.x=-(BAR_W/2+0.015);g.add(cL);
+  const cR=mkBox(0.03,BAR_H+0.06,0.06,0x000000);cR.position.x=(BAR_W/2+0.015);g.add(cR);
+  return g;
+}
+function buildPipRow(){
+  const g=new THREE.Group();
+  for(let i=0;i<10;i++){const p=mkBox(0.055,0.055,0.03,0x333333);p.position.x=(i-4.5)*0.072;p._isPip=true;g.add(p);}
+  return g;
+}
+function updateHungerBar(h,ts){
+  if(!h.barGroup||!h.mesh) return;
+  const s=h.adult?1.0:0.58,barY=s*1.3+0.22;
+  h.barGroup.position.set(h.mesh.position.x,barY,h.mesh.position.z);
+  h.barGroup.quaternion.copy(camera.quaternion);
+  const fill=h.barGroup.children.find(c=>c._isBarFill);if(!fill)return;
+  const pct=Math.max(0,h.hunger)/100;
+  fill.scale.x=Math.max(0.001,pct);
+  fill.position.x=-(BAR_W/2)*(1-pct);
+  const c=new THREE.Color();c.setHex(pct>0.55?0x44cc55:pct>0.28?0xe0a020:0xcc2222);fill.material.color.copy(c);
+  if(h.pipRow){
+    h.pipRow.position.set(h.mesh.position.x,barY+0.17,h.mesh.position.z);
+    h.pipRow.quaternion.copy(camera.quaternion);
+    h.pipRow.children.forEach((pip,i)=>{if(pip._isPip)pip.material.color.setHex(i<(h.feedCount||0)?0xF4D03F:0x333333);});
+  }
+}
+
+function spawnHorse(wx,wz,adult){
+  const mesh=buildHorseMesh(wx,wz,adult);
+  const barGroup=buildHungerBar();scene.add(barGroup);
+  const pipRow=adult?null:buildPipRow();if(pipRow)scene.add(pipRow);
+  return{wx,wz,tx:wx,tz:wz,hunger:100,mesh,barGroup,pipRow,
+    adult,feedCount:0,wobble:Math.random()*Math.PI*2,
+    wanderTimer:Math.random()*3,dancing:false,danceTimer:0,dancePhase:0,dead:false};
+}
+
+// ===================================================================
+// SEA MONSTER SYSTEM
+// ===================================================================
+// River flows N-S (Z axis). Monsters swim in open water, then leap up
+// onto bridge planks and slither across. DANGEROUS only on bridge.
+// state: 'water' → 'emerging' → 'bridge' → 'submerging' → 'water'
+
+function buildSeaMonsterMesh(type){
+  const g=new THREE.Group();
+  const bodyCol = type===0 ? 0x1a5e3a : 0x3a1a5e;
+  const eyeCol  = type===0 ? 0x88ff22 : 0xff44cc;
+  const belly   = type===0 ? 0x2a8855 : 0x662a88;
+  const spine   = type===0 ? 0x0a3a22 : 0x1a0a3a;
+
+  // ---- body segments (5), aligned along Z, head faces +Z ----
+  // Position 0 = tail end, 4 = toward-head end
+  const segZs  = [-1.35,-0.68,-0.02,0.62,1.24];
+  const segWs  = [0.28,0.40,0.44,0.38,0.28];
+  const segHs  = [0.20,0.30,0.34,0.26,0.18];
+  const segs=[];
+  segZs.forEach((sz,i)=>{
+    const seg=mkBox(segWs[i],segHs[i],0.60,bodyCol);
+    seg.position.set(0,segHs[i]/2,sz);
+    seg._segIdx=i; seg._baseH=segHs[i];
+    g.add(seg); segs.push(seg);
+    // Belly stripe
+    const bl=mkBox(segWs[i]*0.55,segHs[i]*0.38,0.62,belly);
+    bl.position.set(0,segHs[i]*0.12,sz); g.add(bl);
+  });
+  g._bodySegs=segs;
+
+  // ---- Head (+Z end) ----
+  const headZ=1.82;
+  const head=mkBox(0.50,0.36,0.50,bodyCol);head.position.set(0,0.28,headZ);g.add(head);
+  const snout=mkBox(0.40,0.2,0.36,belly);snout.position.set(0,0.12,headZ+0.43);g.add(snout);
+  // Upper teeth
+  for(let ti=-2;ti<=2;ti++){const t=mkBox(0.07,0.17,0.06,0xddddaa);t.position.set(ti*0.09,0.26,headZ+0.64);g.add(t);}
+  // Lower jaw
+  const lj=mkBox(0.36,0.11,0.34,bodyCol);lj.position.set(0,0.06,headZ+0.42);g.add(lj);
+  // Eyes (glowing)
+  [-0.17,0.17].forEach(ex=>{
+    const eye=mkBox(0.1,0.12,0.07,eyeCol);eye.position.set(ex,0.40,headZ+0.05);g.add(eye);
+    const pup=mkBox(0.05,0.07,0.05,0x000000);pup.position.set(ex,0.40,headZ+0.08);g.add(pup);
+  });
+  // Nostrils
+  [-0.1,0.1].forEach(nx=>{const n=mkBox(0.06,0.04,0.04,spine);n.position.set(nx,0.32,headZ+0.66);g.add(n);});
+
+  // ---- Dorsal spines ----
+  [1.2,0.55,-0.05,-0.68].forEach((sz,i)=>{
+    const sp=mkBox(0.07,0.16+i*0.04,0.07,spine);
+    sp.position.set(0,segHs[i]+0.16,sz); g.add(sp);
+  });
+
+  // ---- Side fins (flippers) ----
+  [1.0,0.3,-0.38].forEach(fz=>{
+    [-0.55,0.55].forEach(fx=>{
+      const fin=mkBox(0.34,0.07,0.26,belly);
+      fin.position.set(fx,0.17,fz);fin.rotation.z=fx<0?0.38:-0.38;g.add(fin);
+    });
+  });
+
+  // ---- Tail fin ----
+  const tf=mkBox(0.52,0.11,0.24,bodyCol);tf.position.set(0,0.16,-1.58);g.add(tf);
+  const tf2=mkBox(0.3,0.2,0.15,bodyCol);tf2.position.set(0,0.11,-1.80);tf2.rotation.x=0.28;g.add(tf2);
+
+  return g;
+}
+
+function spawnSeaMonsters(){
+  monsters.forEach(m=>{if(m.group)scene.remove(m.group);});
+  monsters=[];
+  const numCols=Math.min(1+Math.floor(level/2),BRIDGE_X1-BRIDGE_X0-1);
+  const allCols=[];
+  for(let x=BRIDGE_X0;x<BRIDGE_X1;x++) allCols.push(x);
+  const cols=allCols.sort(()=>Math.random()-0.5).slice(0,numCols);
+
+  cols.forEach(colX=>{
+    const type=Math.floor(Math.random()*2);
+    const group=buildSeaMonsterMesh(type);
+    const dir=Math.random()<0.5?1:-1;
+    const swimZ=dir>0?(-0.5-Math.random()*0.6):(BRIDGE_Z1+0.5+Math.random()*0.6);
+    const speed=1.6+level*0.16+Math.random()*0.5;
+    group.position.set(colX+0.5,-0.55,swimZ);
+    group.rotation.y=dir>0?0:Math.PI; // face direction of travel
+    scene.add(group);
+    monsters.push({
+      group,x:colX,dir,speed,type,
+      state:'water',wz:swimZ,
+      swimWait:2+Math.random()*6,
+      swimPhase:Math.random()*Math.PI*2,
+      emergeTimer:0,EMERGE_DUR:0.65,
+    });
+  });
+}
+
+function updateSeaMonster(m,dt,ts){
+  const g=m.group;
+  m.swimPhase+=dt*3;
+
+  // Body undulation
+  if(g._bodySegs){
+    const onBridge=m.state==='bridge';
+    const amp=onBridge?0.2:0.05, freq=onBridge?7:2.5;
+    g._bodySegs.forEach((seg,i)=>{
+      const bh=seg._baseH||0.28;
+      seg.position.y=bh/2+Math.sin(ts*0.001*freq+i*1.0)*amp;
+    });
+  }
+
+  if(m.state==='water'){
+    // Bob in open water outside bridge planks
+    const bobY=Math.sin(m.swimPhase*0.65)*0.14-0.38;
+    const baseZ=m.dir>0?-0.55:(BRIDGE_Z1+0.55);
+    const driftZ=Math.sin(m.swimPhase*0.28)*0.5;
+    g.position.y=bobY; g.position.z=baseZ+driftZ; m.wz=g.position.z;
+    m.swimWait-=dt;
+    if(m.swimWait<=0){m.state='emerging';m.emergeTimer=0;m.wz=m.dir>0?BRIDGE_Z0-0.05:BRIDGE_Z1+0.05;}
+  } else if(m.state==='emerging'){
+    m.emergeTimer=Math.min(1,m.emergeTimer+dt/m.EMERGE_DUR);
+    // Dramatic leap arc
+    g.position.y=-0.55+0.65*Math.sin(m.emergeTimer*Math.PI/2);
+    g.position.z=m.wz;
+    if(m.emergeTimer>=1){m.state='bridge';g.position.y=0;}
+  } else if(m.state==='bridge'){
+    // Slither across planks — dangerous!
+    m.wz+=m.dir*m.speed*dt;
+    g.position.z=m.wz;
+    g.position.y=Math.abs(Math.sin(m.swimPhase*1.6))*0.09; // flopping motion
+    // Side-to-side slither
+    g.position.x=m.x+0.5+Math.sin(m.swimPhase*2.2)*0.12;
+    const crossed=m.dir>0?m.wz>BRIDGE_Z1+0.15:m.wz<BRIDGE_Z0-0.15;
+    if(crossed){m.state='submerging';m.emergeTimer=0;}
+  } else if(m.state==='submerging'){
+    m.emergeTimer=Math.min(1,m.emergeTimer+dt/m.EMERGE_DUR);
+    g.position.y=-0.55*Math.sin(m.emergeTimer*Math.PI/2);
+    m.wz+=m.dir*m.speed*dt; g.position.z=m.wz;
+    if(m.emergeTimer>=1){
+      m.state='water'; m.dir=-m.dir;
+      g.rotation.y=m.dir>0?0:Math.PI;
+      m.swimWait=3+Math.random()*7;
+      m.wz=m.dir>0?(-0.55-Math.random()*0.5):(BRIDGE_Z1+0.55+Math.random()*0.5);
+      g.position.y=-0.55; g.position.z=m.wz; g.position.x=m.x+0.5;
+    }
+  }
+  if(m.state!=='bridge') g.position.x=m.x+0.5;
+}
+
+function checkMonsterHit(){
+  if(player.x<BRIDGE_X0||player.x>=BRIDGE_X1) return false;
+  const pwz=player.z+0.5;
+  for(const m of monsters){
+    if(m.state!=='bridge') continue;
+    if(m.x!==player.x) continue;
+    if(Math.abs(m.wz-pwz)<0.72) return true;
+  }
+  return false;
+}
+
+// ===================================================================
+// CARRY MESH
+// ===================================================================
+function buildCarryMesh(type){
+  if(carryMesh){scene.remove(carryMesh);carryMesh=null;}
+  if(type==='hay'){
+    const g=new THREE.Group();
+    const b=mkBox(0.38,0.28,0.38,COL.hay);g.add(b);
+    const t=mkBox(0.28,0.18,0.28,COL.hayDark);t.position.y=0.22;g.add(t);
+    carryMesh=g;
+  } else if(type==='apple'){
+    const g=new THREE.Group();
+    const a=mkSphere(0.2,COL.apple,7);a.position.y=0.2;g.add(a);
+    const s=mkBox(0.04,0.15,0.04,0x6B4226);s.position.y=0.42;g.add(s);
+    carryMesh=g;
+  } else if(type==='log'){
+    const g=new THREE.Group();
+    const b=mkBox(0.7,0.26,0.26,COL.log);b.position.y=0.13;g.add(b);
+    const e=mkBox(0.26,0.26,0.05,0x7a5020);e.position.set(0.35,0.13,0);g.add(e);
+    carryMesh=g;
+  }
+  if(carryMesh) scene.add(carryMesh);
+}
+
+function updateCarryUI(){
+  const el=document.getElementById('carry-ui');
+  if(carrying==='hay')   el.textContent='🌾 HAY — Walk up to a horse to feed it!';
+  else if(carrying==='apple') el.textContent='🍎 APPLE — Feed to an adult horse!';
+  else if(carrying==='log')   el.textContent='🪵 LOG — Bring to the shelter zone!';
+  else el.textContent='';
+}
+
+// ===================================================================
+// APPLE
+// ===================================================================
+function buildAppleMesh(){
+  const g=new THREE.Group();
+  const body=mkSphere(0.28,COL.apple,8);body.position.y=0.28;g.add(body);
+  const stem=mkBox(0.05,0.2,0.05,0x6B4226);stem.position.y=0.6;g.add(stem);
+  const leaf=mkBox(0.16,0.06,0.22,COL.appleLeaf);leaf.position.set(0.1,0.68,0);leaf.rotation.z=0.4;g.add(leaf);
+  g.position.set(APPLE_POS.x+0.5,0,APPLE_POS.z+0.5);
+  return g;
+}
+
+// ===================================================================
+// INTERACTIONS
+// ===================================================================
+function checkInteractions(){
+  const px=player.x,pz=player.z;
+  const pwx=px+0.5,pwz=pz+0.5;
+
+  // Pick up hay
+  if(!carrying&&px===HAY_POS.x&&pz===HAY_POS.z){
+    carrying='hay';buildCarryMesh('hay');updateCarryUI();addScore(10);
+    hayMesh&&(hayMesh.scale.set(1.15,1.15,1.15),setTimeout(()=>hayMesh&&hayMesh.scale.set(1,1,1),180));
+    return;
+  }
+  // Pick up apple
+  if(!carrying&&appleActive&&px===APPLE_POS.x&&pz===APPLE_POS.z){
+    carrying='apple';appleActive=false;
+    scene.remove(appleMesh);appleMesh=null;
+    buildCarryMesh('apple');updateCarryUI();
+    document.getElementById('apple-popup').style.display='none';
+    addScore(25);return;
+  }
+  // Pick up log (step onto log tile)
+  if(!carrying){
+    const stepLog=trees.find(t=>t.felled&&t.logOnGround&&t.logMesh&&t.x===px&&t.z===pz);
+    if(stepLog){
+      scene.remove(stepLog.logMesh);stepLog.logMesh=null;stepLog.logOnGround=false;
+      carrying='log';buildCarryMesh('log');updateCarryUI();addScore(20);return;
+    }
+  }
+  // Deposit log at shelter zone
+  if(carrying==='log'&&px>=SHELTER_X&&px<=SHELTER_X+1&&pz>=SHELTER_Z&&pz<=SHELTER_Z+1){
+    carrying=null;buildCarryMesh(null);updateCarryUI();depositLog();return;
+  }
+  // Feed horse (pen, carrying hay or apple)
+  if(px<PEN_X1&&(carrying==='hay'||carrying==='apple')){
+    const RANGE=1.15;
+    const target=horses.find(h=>!h.dead&&!h.dancing&&Math.abs(h.wx-pwx)<RANGE&&Math.abs(h.wz-pwz)<RANGE);
+    if(!target) return;
+    if(carrying==='hay'){
+      target.hunger=Math.min(100,target.hunger+44);
+      target.feedCount=(target.feedCount||0)+1;
+      addScore(50);carrying=null;buildCarryMesh(null);updateCarryUI();
+      animateHorseEat(target);
+      if(!target.adult&&target.feedCount>=10) graduateFoal(target);
+    } else {
+      if(target.adult){
+        target.hunger=Math.min(100,target.hunger+20);
+        addScore(150);carrying=null;buildCarryMesh(null);updateCarryUI();
+        spawnBaby();animateHorseEat(target);flashScreen('rgba(255,220,0,0.3)');
+      } else {
+        target.dancing=true;target.danceTimer=2.2;target.dancePhase=0;
+        carrying=null;buildCarryMesh(null);updateCarryUI();addScore(5);
+        flashScreen('rgba(100,200,255,0.25)');
+        showBanner('🐎 Foal danced but couldn\'t eat the apple! (adults only)');
+      }
+    }
+    return;
+  }
+  // Auto-chop adjacent trees (right area, no carry)
+  if(!carrying&&px>=RIGHT_X0){
+    tryChopAdjacent();
+    const hasUnfelled=trees.some(t=>!t.felled);
+    document.getElementById('chop-hint').style.display=hasUnfelled?'block':'none';
+  } else if(px<RIGHT_X0) {
+    document.getElementById('chop-hint').style.display='none';
+  }
+}
+
+// ===================================================================
+// SPAWN / GRADUATE
+// ===================================================================
+function spawnBaby(){
+  let bwx,bwz,tries=0;
+  do{bwx=0.6+Math.random()*3.8;bwz=0.7+Math.random()*8.6;tries++;}
+  while(horses.some(h=>!h.dead&&Math.abs(h.wx-bwx)<0.8&&Math.abs(h.wz-bwz)<0.8)&&tries<80);
+  horses.push(spawnHorse(bwx,bwz,false));
+  level=horses.filter(h=>!h.dead).length;
+  updateHUD();spawnSeaMonsters();addScore(200);
+  showBanner('🐎 NEW FOAL BORN! (feed 10x to grow up)');
+}
+
+function graduateFoal(h){
+  if(h.mesh)scene.remove(h.mesh);
+  if(h.barGroup)scene.remove(h.barGroup);
+  if(h.pipRow){scene.remove(h.pipRow);h.pipRow=null;}
+  h.mesh=buildHorseMesh(h.wx,h.wz,true);
+  h.barGroup=buildHungerBar();scene.add(h.barGroup);
+  h.adult=true;h.feedCount=0;
+  flashScreen('rgba(255,220,80,0.4)');addScore(300);updateHUD();
+  showBanner('🐴 FOAL GREW UP! Now it can have babies!');
+}
+
+function animateHorseEat(h){
+  if(!h||!h.mesh||h.dead) return;
+  let t=0;
+  const iv=setInterval(()=>{
+    t+=0.06;if(!h.mesh||h.dead){clearInterval(iv);return;}
+    h.mesh.position.y=Math.sin(t*Math.PI*2)*0.28*Math.max(0,1-t);
+    if(t>=1){h.mesh.position.y=0;clearInterval(iv);}
+  },30);
+}
+
+// ===================================================================
+// UI / SCORE
+// ===================================================================
+function updateHUD(){
+  const alive=horses.filter(h=>!h.dead);
+  document.getElementById('adult-num').textContent=alive.filter(h=>h.adult).length;
+  document.getElementById('foal-num').textContent=alive.filter(h=>!h.adult).length;
+  document.getElementById('dead-num').textContent=horses.filter(h=>h.dead).length;
+}
+
+let bannerTO=null;
+function showBanner(txt){
+  const b=document.getElementById('event-banner');
+  b.textContent=txt;b.style.display='block';
+  if(bannerTO)clearTimeout(bannerTO);
+  bannerTO=setTimeout(()=>b.style.display='none',3000);
+}
+function showMsg(title,body,btn,action){
+  const o=document.getElementById('msg-overlay');o.style.display='block';
+  o.innerHTML=`<h1>${title}</h1><p>${body}</p><button class="retro-btn" id="act-btn">${btn}</button>`;
+  document.getElementById('act-btn').addEventListener('click',action);
+}
+function hideMsg(){document.getElementById('msg-overlay').style.display='none';}
+function flashScreen(col='rgba(255,0,0,0.45)'){
+  const fl=document.getElementById('flash-overlay');fl.style.background=col;
+  setTimeout(()=>fl.style.background='rgba(0,0,0,0)',130);
+}
+function addScore(n){score+=n;document.getElementById('score').textContent=score;}
+
+// ===================================================================
+// TAP-TO-MOVE INPUT
+// ===================================================================
+const raycaster=new THREE.Raycaster();
+const groundPlane=new THREE.Plane(new THREE.Vector3(0,1,0),0);
+let movePath=[], tapIndicator=null;
+
+function buildTapIndicator(){
+  const g=new THREE.Group();
+  const ring=mkBox(0.7,0.04,0.7,0xF4D03F);ring.position.y=0.02;g.add(ring);
+  const inn=mkBox(0.3,0.04,0.3,0xffffff);inn.position.y=0.03;g.add(inn);
+  return g;
+}
+
+function screenToGrid(cx,cy){
+  const ndcX=(cx/window.innerWidth)*2-1,ndcY=-(cy/window.innerHeight)*2+1;
+  raycaster.setFromCamera({x:ndcX,y:ndcY},camera);
+  const hit=new THREE.Vector3();
+  if(!raycaster.ray.intersectPlane(groundPlane,hit)) return null;
+  const gx=Math.floor(hit.x),gz=Math.floor(hit.z);
+  if(gx<0||gx>=GW||gz<0||gz>=GH) return null;
+  return{gx,gz};
+}
+
+function canMove(fx,fz,dx,dz){
+  const nx=fx+dx,nz=fz+dz;
+  if(nx<0||nx>=GW||nz<0||nz>=GH) return false;
+  if(trees.some(t=>!t.felled&&t.x===nx&&t.z===nz)) return false;
+  const onBridgeX=nx>=BRIDGE_X0&&nx<BRIDGE_X1;
+  if(onBridgeX&&(nz<BRIDGE_Z0||nz>BRIDGE_Z1)) return false;
+  const crossPen=(fx<PEN_X1&&nx>=PEN_X1)||(fx>=PEN_X1&&nx<PEN_X1);
+  if(crossPen&&(nz<GATE_Z0||nz>GATE_Z1)) return false;
+  return true;
+}
+
+function tryMove(dx,dz){
+  if(!canMove(player.x,player.z,dx,dz)) return false;
+  player.x+=dx;player.z+=dz;return true;
+}
+
+function buildPath(tx,tz){
+  const path=[];let cx=player.x,cz=player.z,steps=0;
+  while((cx!==tx||cz!==tz)&&steps++<44){
+    const ddx=Math.sign(tx-cx),ddz=Math.sign(tz-cz);
+    const ord=Math.abs(tx-cx)>=Math.abs(tz-cz)?[[ddx,0],[0,ddz]]:[[0,ddz],[ddx,0]];
+    let moved=false;
+    for(const[sdx,sdz]of ord){
+      if(sdx===0&&sdz===0) continue;
+      if(canMove(cx,cz,sdx,sdz)){path.push({dx:sdx,dz:sdz});cx+=sdx;cz+=sdz;moved=true;break;}
+    }
+    if(!moved) break;
+  }
+  return path;
+}
+
+function handleTap(cx,cy){
+  if(STATE!=='playing') return;
+  const cell=screenToGrid(cx,cy);if(!cell) return;
+  movePath=buildPath(cell.gx,cell.gz);
+  if(!tapIndicator){tapIndicator=buildTapIndicator();scene.add(tapIndicator);}
+  tapIndicator.position.set(cell.gx+0.5,0,cell.gz+0.5);
+  tapIndicator.visible=true;tapIndicator._ft=0.7;
+}
+
+canvas.addEventListener('pointerdown',e=>{e.preventDefault();handleTap(e.clientX,e.clientY);},{passive:false});
+document.addEventListener('keydown',e=>{
+  if(!['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','w','a','s','d','W','A','S','D'].includes(e.key)) return;
+  e.preventDefault();if(STATE!=='playing') return;
+  const D={'ArrowRight':{dx:1,dz:0},'d':{dx:1,dz:0},'D':{dx:1,dz:0},'ArrowLeft':{dx:-1,dz:0},'a':{dx:-1,dz:0},'A':{dx:-1,dz:0},
+    'ArrowUp':{dx:0,dz:-1},'w':{dx:0,dz:-1},'W':{dx:0,dz:-1},'ArrowDown':{dx:0,dz:1},'s':{dx:0,dz:1},'S':{dx:0,dz:1}};
+  if(D[e.key]) movePath=[D[e.key]];
+});
+
+// ===================================================================
+// DEATH / GAMEOVER
+// ===================================================================
+function playerDied(){
+  if(STATE==='dead'||STATE==='gameover') return;
+  STATE='dead';flashScreen('rgba(255,0,0,0.7)');
+  if(playerGroup)playerGroup.children.forEach(c=>{if(c.material)c.material.color.setHex(0xff2222);});
+  setTimeout(()=>{
+    showMsg('☠ YOU DIED!','A sea monster slithered over you!<br><br>Score: '+score+'<br>Adults raised: '+horses.filter(h=>h.adult).length,'TRY AGAIN',()=>{hideMsg();initGame();});
+    STATE='gameover';
+  },950);
+}
+
+function horseStarved(){
+  if(STATE==='gameover'||STATE==='dead') return;
+  STATE='gameover';flashScreen('rgba(0,0,180,0.5)');
+  setTimeout(()=>{
+    showMsg('💀 HERD LOST!','All horses starved!<br><br>Score: '+score,'TRY AGAIN',()=>{hideMsg();initGame();});
+  },600);
+}
+
+// ===================================================================
+// INIT GAME
+// ===================================================================
+function initGame(){
+  level=1;score=0;carrying=null;
+  appleTimer=0;appleActive=false;totalTime=0;moveTimer=0;
+  stormPhase='clear';stormTimer=S_CLEAR;
+  movePath=[];if(tapIndicator)tapIndicator.visible=false;
+  STATE='playing';clearRain();
+
+  // Reset lights/sky
+  ambLight.intensity=0.7;sunLight.intensity=1.1;moonLight.intensity=0.35;strmLight.intensity=0;
+  scene.fog.color.setHex(COL.sky);renderer.setClearColor(COL.sky);
+  document.getElementById('storm-bar').style.display='none';
+  document.getElementById('chop-hint').style.display='none';
+  document.getElementById('apple-popup').style.display='none';
+  document.getElementById('event-banner').style.display='none';
+
+  if(appleMesh){scene.remove(appleMesh);appleMesh=null;}
+  horses.forEach(h=>{if(h.mesh)scene.remove(h.mesh);if(h.barGroup)scene.remove(h.barGroup);if(h.pipRow)scene.remove(h.pipRow);});
+  horses=[];
+  monsters.forEach(m=>{if(m.group)scene.remove(m.group);});monsters=[];
+
+  buildCarryMesh(null);
+  buildWorld();
+  initTrees();
+  initShelter();
+
+  player={x:P_START.x,z:P_START.z};
+  horses.push(spawnHorse(HORSE_SLOTS[0].x+0.5,HORSE_SLOTS[0].z+0.5,true));
+  spawnSeaMonsters();
+  buildPlayerMesh();updatePlayerPos();
+  updateHUD();updateShelterUI();
+  document.getElementById('score').textContent='0';
+}
+
+// ===================================================================
+// GAME LOOP
+// ===================================================================
+function loop(ts){
+  requestAnimationFrame(loop);
+  const dt=Math.min((ts-lastTs)/1000,0.08);lastTs=ts;totalTime+=dt;
+
+  if(STATE==='playing'){
+    // Player movement
+    moveTimer-=dt;
+    if(moveTimer<=0&&movePath.length>0){
+      const mv=movePath[0];
+      if(tryMove(mv.dx,mv.dz)){
+        movePath.shift();updatePlayerPos();checkInteractions();moveTimer=MOVE_DELAY;
+        if(playerGroup){playerGroup.position.y=0.14;setTimeout(()=>{if(playerGroup)playerGroup.position.y=0;},65);}
+      } else { movePath=[]; }
+    }
+
+    // Tap indicator
+    if(tapIndicator&&tapIndicator.visible){
+      tapIndicator._ft-=dt;
+      tapIndicator.scale.setScalar(0.6+Math.max(0,tapIndicator._ft/0.7)*0.4);
+      tapIndicator.rotation.y+=dt*3;
+      if(tapIndicator._ft<=0)tapIndicator.visible=false;
+    }
+
+    // Sea monsters
+    monsters.forEach(m=>updateSeaMonster(m,dt,ts));
+    if(checkMonsterHit()) playerDied();
+
+    // Horses
+    horses.forEach(h=>{
+      if(h.dead){
+        if(h.mesh)h.mesh.position.y=Math.max(-0.5,h.mesh.position.y-dt*0.28);
+        if(h.barGroup)h.barGroup.visible=false;
+        if(h.pipRow)h.pipRow.visible=false;
+        return;
+      }
+      if(h.dancing){
+        h.danceTimer-=dt;h.dancePhase+=dt*12;
+        if(h.mesh){h.mesh.position.y=Math.abs(Math.sin(h.dancePhase))*0.52;h.mesh.rotation.y=h.dancePhase*1.3;}
+        if(h.danceTimer<=0){h.dancing=false;if(h.mesh)h.mesh.position.y=0;}
+        updateHungerBar(h,ts);return;
+      }
+      h.hunger=Math.max(0,h.hunger-HUNGER_RATE*dt);
+      if(h.hunger<=0&&!h.dead){
+        h.dead=true;
+        if(h.mesh)h.mesh.children.forEach(c=>{if(c.material)c.material.color.setHex(0x444444);});
+        flashScreen('rgba(0,0,100,0.3)');updateHUD();
+        if(horses.every(hh=>hh.dead))horseStarved();
+        return;
+      }
+      // Wander
+      h.wanderTimer-=dt;
+      if(h.wanderTimer<=0){h.tx=0.6+Math.random()*3.8;h.tz=0.7+Math.random()*8.6;h.wanderTimer=2.5+Math.random()*3.5;}
+      const hdx=h.tx-h.wx,hdz=h.tz-h.wz,hdist=Math.sqrt(hdx*hdx+hdz*hdz);
+      if(hdist>0.05){
+        const step=Math.min(1.4*dt,hdist);h.wx+=hdx/hdist*step;h.wz+=hdz/hdist*step;
+        if(h.mesh){h.mesh.rotation.y=Math.atan2(hdx,hdz)+Math.PI;h.mesh.position.y=Math.abs(Math.sin(ts*0.005+h.wobble))*0.1;}
+      } else {
+        if(h.mesh){h.mesh.position.y=Math.sin(ts*0.0018+h.wobble)*0.04;if(h.hunger<30)h.mesh.rotation.y+=Math.sin(ts*0.006+h.wobble)*0.015;}
+      }
+      if(h.mesh){h.mesh.position.x=h.wx;h.mesh.position.z=h.wz;}
+      updateHungerBar(h,ts);
+    });
+
+    // Tree chop animation
+    trees.forEach(t=>{
+      if(t.chopAnim>0){
+        t.chopAnim-=dt;
+        if(t.mesh) t.mesh.rotation.z=Math.sin(t.chopAnim*42)*0.09*(t.chopAnim/0.45);
+        if(t.chopAnim<0) t.chopAnim=0;
+      }
+    });
+
+    // Apple
+    appleTimer+=dt;
+    if(appleTimer>=APPLE_INTERVAL&&!appleActive){
+      appleActive=true;appleTimer=0;
+      appleMesh=buildAppleMesh();scene.add(appleMesh);
+      document.getElementById('apple-popup').style.display='block';
+    }
+    if(appleMesh){appleMesh.position.y=Math.sin(ts*0.004)*0.12;appleMesh.rotation.y+=dt*0.8;}
+    if(hayMesh) hayMesh.rotation.y=Math.sin(ts*0.001)*0.04;
+
+    // Carry mesh float
+    if(carryMesh){carryMesh.position.set(player.x+0.5,1.72+Math.sin(ts*0.005)*0.06,player.z+0.5);carryMesh.rotation.y+=dt*1.5;}
+
+    // Player sway
+    if(playerGroup) playerGroup.rotation.y=Math.sin(ts*0.002)*0.04;
+
+    // Stars
+    starsGroup.children.forEach((s,i)=>s.scale.setScalar(0.7+Math.sin(ts*0.003+i)*0.3));
+
+    // Storm
+    updateStorm(dt);
+    updateHUD();
+  }
+
+  renderer.render(scene,camera);
+}
+
+// ===================================================================
+// START
+// ===================================================================
+document.getElementById('start-btn').addEventListener('click',()=>{hideMsg();initGame();});
+window.addEventListener('resize',()=>{
+  camera.aspect=window.innerWidth/window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth,window.innerHeight);
+});
+
+lastTs=performance.now();
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>

@@ -1,0 +1,16 @@
+# Environment files
+.env
+*.env
+
+# Keep example files
+!.env.example
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
