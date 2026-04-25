@@ -8,6 +8,7 @@ Cloudflare Pages hosting for static HTML/Three.js games.
 finley.lol/
 ├── games/
 │   ├── horses/          → horses.finley.lol
+│   ├── sandcastles/     → sandcastles.finley.lol
 │   └── seamonsters/     → seamonsters.finley.lol
 ├── scripts/
 │   ├── deploy.sh        → Deploy a game (git + DNS + Pages)
