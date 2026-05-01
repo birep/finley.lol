@@ -1,0 +1,1275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Panda World 🐼</title>
+<style>
+  :root {
+    --ink: #3a2a1a;
+    --paper: #fff8ec;
+    --soft: rgba(255, 248, 236, 0.9);
+    --magic: #b384ff;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: #fce4c8; touch-action: none; }
+  body { font-family: 'Quicksand', 'Comic Sans MS', system-ui, sans-serif; user-select: none; }
+  canvas { display: block; }
+
+  #hud {
+    position: fixed; top: 14px; left: 50%; transform: translateX(-50%);
+    background: var(--soft); color: var(--ink);
+    padding: 10px 18px; border-radius: 22px;
+    font-weight: 700; font-size: 15px; letter-spacing: 0.02em;
+    box-shadow: 0 6px 24px rgba(58, 42, 26, 0.15);
+    pointer-events: none;
+    z-index: 10;
+    display: flex; gap: 16px; align-items: center;
+    flex-wrap: wrap; justify-content: center;
+    max-width: 92vw;
+  }
+  #hud .row { white-space: nowrap; }
+  #hud .num { display: inline-block; min-width: 1.2em; text-align: right; }
+  body.panda-mode #caught-row { display: none; }
+  body.dragonfly-mode #bamboo-row { display: none; }
+
+  #hint {
+    position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%);
+    background: var(--soft); color: var(--ink);
+    padding: 10px 20px; border-radius: 999px;
+    font-weight: 600; font-size: 14px;
+    box-shadow: 0 6px 20px rgba(58, 42, 26, 0.18);
+    pointer-events: none;
+    z-index: 10; text-align: center;
+    transition: opacity 0.4s ease;
+    max-width: 90vw;
+  }
+
+  #toast {
+    position: fixed; top: 50%; left: 50%;
+    transform: translate(-50%, -50%) scale(0.9);
+    background: rgba(255, 248, 236, 0.95);
+    color: var(--ink);
+    padding: 14px 26px; border-radius: 999px;
+    font-weight: 800; font-size: 22px;
+    box-shadow: 0 8px 32px rgba(58, 42, 26, 0.25);
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.4s ease, transform 0.4s ease;
+    z-index: 11;
+  }
+  #toast.show { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+
+  #stick-base {
+    position: fixed; left: 24px; bottom: 24px;
+    width: 130px; height: 130px; border-radius: 50%;
+    background: rgba(255, 248, 236, 0.55);
+    border: 3px solid rgba(58, 42, 26, 0.18);
+    box-shadow: 0 6px 24px rgba(58, 42, 26, 0.15);
+    display: none; touch-action: none; z-index: 20;
+  }
+  #stick-knob {
+    position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+    width: 60px; height: 60px; border-radius: 50%;
+    background: #fff8ec; border: 3px solid rgba(58, 42, 26, 0.25);
+    box-shadow: 0 4px 12px rgba(58, 42, 26, 0.25);
+    pointer-events: none;
+  }
+  body.touch #stick-base { display: block; }
+
+  .btn {
+    position: fixed; right: 24px;
+    border-radius: 50%;
+    color: white; font-weight: 800; font-size: 24px;
+    border: 4px solid rgba(255,255,255,0.7);
+    box-shadow: 0 6px 20px rgba(58, 42, 26, 0.25);
+    display: none; align-items: center; justify-content: center;
+    z-index: 20; cursor: pointer;
+    transition: transform 0.1s ease;
+  }
+  .btn:active { transform: scale(0.92); }
+  #fly-up-btn {
+    bottom: 110px; width: 76px; height: 76px;
+    background: linear-gradient(135deg, #b8e0ff, #6cb6ea);
+  }
+  #fly-down-btn {
+    bottom: 24px; width: 76px; height: 76px;
+    background: linear-gradient(135deg, #d8caff, #9c6bff);
+  }
+  body.touch.dragonfly-mode #fly-up-btn { display: flex; }
+  body.touch.dragonfly-mode #fly-down-btn { display: flex; }
+
+  #flash {
+    position: fixed; inset: 0;
+    background: radial-gradient(circle at center, rgba(255,255,255,0.9), rgba(179,132,255,0.6) 40%, transparent 70%);
+    opacity: 0; pointer-events: none; z-index: 30;
+    transition: opacity 0.3s ease;
+  }
+  #flash.on { opacity: 1; }
+</style>
+</head>
+<body class="panda-mode">
+  <div id="hud">
+    <span class="row">🐼 waves: <span id="count" class="num">0</span></span>
+    <span id="bamboo-row" class="row">🎋 bamboo: <span id="bamboo" class="num">0</span></span>
+    <span id="caught-row" class="row">🦟 caught: <span id="caught" class="num">0</span></span>
+  </div>
+
+  <div id="hint">Use the arrow keys to run around!</div>
+  <div id="toast"></div>
+
+  <div id="stick-base"><div id="stick-knob"></div></div>
+  <div id="fly-up-btn" class="btn">▲</div>
+  <div id="fly-down-btn" class="btn">▼</div>
+
+  <div id="flash"></div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script>
+  // ============================================================
+  // PANDA WORLD — circle-to-harvest + dragonfly portal
+  // ============================================================
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(0xfce4c8);
+  scene.fog = new THREE.Fog(0xfce4c8, 28, 70);
+
+  const camera = new THREE.PerspectiveCamera(55, innerWidth / innerHeight, 0.1, 200);
+  const renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+  renderer.setSize(innerWidth, innerHeight);
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  document.body.appendChild(renderer.domElement);
+
+  // ---- Lights -------------------------------------------------
+  scene.add(new THREE.HemisphereLight(0xffe9c4, 0x88a060, 0.85));
+  const sun = new THREE.DirectionalLight(0xfff1d6, 1.15);
+  sun.position.set(12, 20, 8);
+  sun.castShadow = true;
+  sun.shadow.mapSize.set(2048, 2048);
+  Object.assign(sun.shadow.camera, { left: -25, right: 25, top: 25, bottom: -25, near: 0.5, far: 60 });
+  sun.shadow.bias = -0.0005;
+  scene.add(sun);
+  const fill = new THREE.DirectionalLight(0xc8d8ff, 0.25);
+  fill.position.set(-10, 8, -6);
+  scene.add(fill);
+
+  // ---- Ground -------------------------------------------------
+  const groundGeo = new THREE.PlaneGeometry(120, 120, 60, 60);
+  groundGeo.rotateX(-Math.PI / 2);
+  const groundColors = [];
+  const greens = [[0.49,0.69,0.36],[0.55,0.74,0.40],[0.45,0.65,0.34],[0.60,0.78,0.45]];
+  for (let i = 0; i < groundGeo.attributes.position.count; i++) {
+    const c = greens[Math.floor(Math.random() * greens.length)];
+    groundColors.push(c[0], c[1], c[2]);
+    groundGeo.attributes.position.setY(i, (Math.random() - 0.5) * 0.15);
+  }
+  groundGeo.setAttribute('color', new THREE.Float32BufferAttribute(groundColors, 3));
+  groundGeo.computeVertexNormals();
+  const ground = new THREE.Mesh(groundGeo, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1 }));
+  ground.receiveShadow = true;
+  scene.add(ground);
+
+  // ---- Pond ---------------------------------------------------
+  const pondCenter = new THREE.Vector3(8, 0, 6);
+  const pondRadius = 5;
+
+  const sand = new THREE.Mesh(
+    new THREE.RingGeometry(pondRadius - 0.2, pondRadius + 1.1, 48),
+    new THREE.MeshStandardMaterial({ color: 0xe8d4a8, roughness: 1 })
+  );
+  sand.rotation.x = -Math.PI / 2;
+  sand.position.set(pondCenter.x, 0.02, pondCenter.z);
+  sand.receiveShadow = true;
+  scene.add(sand);
+
+  const waterGeo = new THREE.CircleGeometry(pondRadius, 48);
+  waterGeo.rotateX(-Math.PI / 2);
+  const water = new THREE.Mesh(
+    waterGeo,
+    new THREE.MeshStandardMaterial({ color: 0x6cc5e0, roughness: 0.25, metalness: 0.1, transparent: true, opacity: 0.92 })
+  );
+  water.position.set(pondCenter.x, 0.05, pondCenter.z);
+  water.receiveShadow = true;
+  scene.add(water);
+
+  for (let i = 0; i < 5; i++) {
+    const pad = new THREE.Mesh(
+      new THREE.CircleGeometry(0.45 + Math.random() * 0.25, 16),
+      new THREE.MeshStandardMaterial({ color: 0x4caf50, roughness: 0.8 })
+    );
+    pad.rotation.x = -Math.PI / 2;
+    const a = Math.random() * Math.PI * 2;
+    const r = Math.random() * (pondRadius - 1);
+    pad.position.set(pondCenter.x + Math.cos(a) * r, 0.08, pondCenter.z + Math.sin(a) * r);
+    scene.add(pad);
+    if (Math.random() < 0.5) {
+      const flower = new THREE.Mesh(
+        new THREE.SphereGeometry(0.12, 12, 10),
+        new THREE.MeshStandardMaterial({ color: 0xffb6c1, roughness: 0.7 })
+      );
+      flower.position.copy(pad.position); flower.position.y = 0.18;
+      scene.add(flower);
+    }
+  }
+
+  for (let i = 0; i < 14; i++) {
+    const a = (i / 14) * Math.PI * 2 + Math.random() * 0.2;
+    const r = pondRadius + 0.7 + Math.random() * 0.5;
+    const stone = new THREE.Mesh(
+      new THREE.DodecahedronGeometry(0.25 + Math.random() * 0.25, 0),
+      new THREE.MeshStandardMaterial({ color: 0x9c9c8c, roughness: 0.95, flatShading: true })
+    );
+    stone.position.set(pondCenter.x + Math.cos(a) * r, 0.12, pondCenter.z + Math.sin(a) * r);
+    stone.rotation.set(Math.random(), Math.random(), Math.random());
+    stone.castShadow = true; stone.receiveShadow = true;
+    scene.add(stone);
+  }
+
+  // ---- DRAGONFLY PORTAL ---------------------------------------
+  const portalPos = new THREE.Vector3(-9, 0, -7);
+  const portal = new THREE.Group();
+  portal.position.copy(portalPos);
+  scene.add(portal);
+
+  const portalDisc = new THREE.Mesh(
+    new THREE.CircleGeometry(1.3, 32),
+    new THREE.MeshBasicMaterial({ color: 0xb384ff, transparent: true, opacity: 0.55, side: THREE.DoubleSide })
+  );
+  portalDisc.rotation.x = -Math.PI / 2;
+  portalDisc.position.y = 0.06;
+  portal.add(portalDisc);
+
+  const portalRing = new THREE.Mesh(
+    new THREE.TorusGeometry(1.3, 0.12, 10, 36),
+    new THREE.MeshStandardMaterial({ color: 0xd8caff, emissive: 0x9c6bff, emissiveIntensity: 0.8, roughness: 0.2, metalness: 0.6 })
+  );
+  portalRing.rotation.x = -Math.PI / 2;
+  portalRing.position.y = 0.12;
+  portal.add(portalRing);
+
+  const portalInner = new THREE.Mesh(
+    new THREE.TorusGeometry(0.7, 0.06, 8, 24),
+    new THREE.MeshStandardMaterial({ color: 0xfff1d6, emissive: 0xffd56b, emissiveIntensity: 0.7, roughness: 0.3 })
+  );
+  portalInner.rotation.x = -Math.PI / 2;
+  portalInner.position.y = 0.18;
+  portal.add(portalInner);
+
+  const portalBeam = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.6, 1.1, 4.5, 16, 1, true),
+    new THREE.MeshBasicMaterial({ color: 0xb384ff, transparent: true, opacity: 0.18, side: THREE.DoubleSide, depthWrite: false })
+  );
+  portalBeam.position.y = 2.3;
+  portal.add(portalBeam);
+
+  const portalSparkles = [];
+  for (let i = 0; i < 8; i++) {
+    const s = new THREE.Mesh(
+      new THREE.SphereGeometry(0.08, 8, 6),
+      new THREE.MeshBasicMaterial({ color: 0xfff1d6 })
+    );
+    s.userData = { angle: (i / 8) * Math.PI * 2, radius: 1.3, height: 0.5 + Math.random() * 0.5 };
+    portal.add(s);
+    portalSparkles.push(s);
+  }
+  const portalLight = new THREE.PointLight(0xb384ff, 1.2, 8);
+  portalLight.position.y = 1.5;
+  portal.add(portalLight);
+
+  // ---- Bamboo factory (regrowing + circle-to-harvest) ---------
+  const bambooGroup = new THREE.Group();
+  scene.add(bambooGroup);
+
+  function makeBamboo(x, z, height = 5, tilt = 0) {
+    const g = new THREE.Group();
+    const segments = Math.floor(height / 0.7);
+    for (let i = 0; i < segments; i++) {
+      const seg = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.13, 0.14, 0.65, 10),
+        new THREE.MeshStandardMaterial({ color: i % 2 === 0 ? 0xa4c75a : 0x9bbe51, roughness: 0.7 })
+      );
+      seg.position.y = 0.35 + i * 0.7;
+      seg.castShadow = true;
+      g.add(seg);
+      const ring = new THREE.Mesh(
+        new THREE.TorusGeometry(0.16, 0.03, 6, 16),
+        new THREE.MeshStandardMaterial({ color: 0x6b8e3a, roughness: 0.8 })
+      );
+      ring.rotation.x = Math.PI / 2;
+      ring.position.y = 0.7 + i * 0.7;
+      g.add(ring);
+    }
+    const leafMat = new THREE.MeshStandardMaterial({ color: 0x7cb342, side: THREE.DoubleSide, roughness: 0.85 });
+    const leafCount = 4 + Math.floor(Math.random() * 3);
+    for (let i = 0; i < leafCount; i++) {
+      const leaf = new THREE.Mesh(new THREE.PlaneGeometry(0.4, 1.1), leafMat);
+      leaf.position.y = height - 0.2 + Math.random() * 0.4;
+      leaf.position.x = (Math.random() - 0.5) * 0.3;
+      leaf.position.z = (Math.random() - 0.5) * 0.3;
+      leaf.rotation.set(Math.random() * 0.6, Math.random() * Math.PI * 2, (Math.random() - 0.5) * 0.8);
+      leaf.castShadow = true;
+      g.add(leaf);
+    }
+
+    // golden progress arc at the base — visible while circling
+    const progressRing = new THREE.Mesh(
+      new THREE.RingGeometry(0.55, 0.78, 32, 1, 0, 0.001),
+      new THREE.MeshBasicMaterial({ color: 0xffd357, side: THREE.DoubleSide, transparent: true, opacity: 0.9 })
+    );
+    progressRing.rotation.x = -Math.PI / 2;
+    progressRing.position.y = 0.04;
+    progressRing.visible = false;
+    g.add(progressRing);
+
+    g.position.set(x, 0, z);
+    g.rotation.z = tilt;
+    g.userData = {
+      baseRotZ: tilt, swayPhase: Math.random() * Math.PI * 2,
+      alive: true, regrowTimer: 0, harvestAnim: 0, growAnim: 1,
+      lastAngle: null, angleAccum: 0,
+      progressRing,
+    };
+    bambooGroup.add(g);
+    return g;
+  }
+
+  const bamboos = [];
+  for (let i = 0; i < 55; i++) {
+    let x, z, ok = false, tries = 0;
+    while (!ok && tries < 30) {
+      x = (Math.random() - 0.5) * 38;
+      z = (Math.random() - 0.5) * 38;
+      const dPond = Math.hypot(x - pondCenter.x, z - pondCenter.z);
+      const dStart = Math.hypot(x, z);
+      const dPortal = Math.hypot(x - portalPos.x, z - portalPos.z);
+      if (dPond > pondRadius + 1.5 && dStart > 3 && dPortal > 2.5) ok = true;
+      tries++;
+    }
+    if (ok) bamboos.push(makeBamboo(x, z, 4 + Math.random() * 3, (Math.random() - 0.5) * 0.15));
+  }
+
+  for (let i = 0; i < 80; i++) {
+    const x = (Math.random() - 0.5) * 50;
+    const z = (Math.random() - 0.5) * 50;
+    if (Math.hypot(x - pondCenter.x, z - pondCenter.z) < pondRadius + 1) continue;
+    const colors = [0xff8aa2, 0xffd56b, 0xffffff, 0xc59cf2];
+    const flower = new THREE.Mesh(
+      new THREE.SphereGeometry(0.1, 8, 6),
+      new THREE.MeshStandardMaterial({ color: colors[Math.floor(Math.random()*colors.length)], roughness: 0.8 })
+    );
+    flower.position.set(x, 0.1, z);
+    scene.add(flower);
+  }
+
+  // ---- Panda factory ------------------------------------------
+  const PANDA_WHITE = 0xfff8ec, PANDA_DARK = 0x2c2418;
+
+  function makePanda() {
+    const panda = new THREE.Group();
+    const whiteMat = new THREE.MeshStandardMaterial({ color: PANDA_WHITE, roughness: 0.85 });
+    const darkMat = new THREE.MeshStandardMaterial({ color: PANDA_DARK, roughness: 0.85 });
+
+    const body = new THREE.Mesh(new THREE.SphereGeometry(0.55, 20, 16), whiteMat);
+    body.scale.set(1, 0.95, 1.1); body.position.y = 0.55; body.castShadow = true;
+    panda.add(body);
+
+    const head = new THREE.Group(); head.position.set(0, 1.15, 0.15); panda.add(head);
+    const headMesh = new THREE.Mesh(new THREE.SphereGeometry(0.42, 20, 16), whiteMat);
+    headMesh.castShadow = true; head.add(headMesh);
+
+    [-1, 1].forEach(side => {
+      const ear = new THREE.Mesh(new THREE.SphereGeometry(0.13, 12, 10), darkMat);
+      ear.position.set(0.27 * side, 0.36, -0.05);
+      ear.scale.set(1, 0.9, 0.7); ear.castShadow = true; head.add(ear);
+    });
+    [-1, 1].forEach(side => {
+      const patch = new THREE.Mesh(new THREE.SphereGeometry(0.12, 12, 10), darkMat);
+      patch.position.set(0.15 * side, 0.05, 0.32);
+      patch.scale.set(1, 1.2, 0.4); patch.rotation.z = -0.3 * side; head.add(patch);
+      const eye = new THREE.Mesh(new THREE.SphereGeometry(0.04, 8, 8),
+        new THREE.MeshStandardMaterial({ color: 0xffffff }));
+      eye.position.set(0.15 * side, 0.06, 0.42); head.add(eye);
+      const pupil = new THREE.Mesh(new THREE.SphereGeometry(0.025, 8, 8),
+        new THREE.MeshStandardMaterial({ color: 0x111111 }));
+      pupil.position.set(0.15 * side, 0.06, 0.46); head.add(pupil);
+    });
+
+    const snout = new THREE.Mesh(new THREE.SphereGeometry(0.13, 12, 10), whiteMat);
+    snout.position.set(0, -0.05, 0.36); snout.scale.set(1.2, 0.8, 0.7); head.add(snout);
+    const nose = new THREE.Mesh(new THREE.SphereGeometry(0.045, 10, 8), darkMat);
+    nose.position.set(0, 0.0, 0.5); head.add(nose);
+    const mouth = new THREE.Mesh(new THREE.TorusGeometry(0.05, 0.012, 6, 12, Math.PI), darkMat);
+    mouth.rotation.x = Math.PI / 2; mouth.rotation.z = Math.PI;
+    mouth.position.set(0, -0.09, 0.49); head.add(mouth);
+
+    const arms = [];
+    [-1, 1].forEach(side => {
+      const arm = new THREE.Mesh(new THREE.SphereGeometry(0.18, 12, 10), darkMat);
+      arm.position.set(0.5 * side, 0.55, 0.05);
+      arm.scale.set(0.8, 1.1, 0.8); arm.castShadow = true;
+      panda.add(arm); arms.push(arm);
+    });
+    [-1, 1].forEach(side => {
+      const leg = new THREE.Mesh(new THREE.SphereGeometry(0.2, 12, 10), darkMat);
+      leg.position.set(0.22 * side, 0.18, 0);
+      leg.scale.set(0.9, 0.7, 1.1); leg.castShadow = true;
+      panda.add(leg);
+    });
+    const tail = new THREE.Mesh(new THREE.SphereGeometry(0.1, 10, 8), whiteMat);
+    tail.position.set(0, 0.7, -0.55); panda.add(tail);
+
+    panda.userData.head = head;
+    panda.userData.arms = arms;
+    panda.userData.body = body;
+    panda.userData.mouth = mouth;
+    return panda;
+  }
+
+  // ---- Player panda -------------------------------------------
+  const playerPanda = makePanda();
+  scene.add(playerPanda);
+
+  const bow1 = new THREE.Mesh(
+    new THREE.SphereGeometry(0.09, 10, 8),
+    new THREE.MeshStandardMaterial({ color: 0xff7eb6, roughness: 0.7 })
+  );
+  bow1.position.set(-0.08, 0.36, -0.05); bow1.scale.set(1, 0.7, 0.7);
+  playerPanda.userData.head.add(bow1);
+  const bow2 = bow1.clone(); bow2.position.x = 0.08;
+  playerPanda.userData.head.add(bow2);
+  const bowKnot = new THREE.Mesh(
+    new THREE.SphereGeometry(0.05, 10, 8),
+    new THREE.MeshStandardMaterial({ color: 0xff5a9e, roughness: 0.7 })
+  );
+  bowKnot.position.set(0, 0.36, -0.05);
+  playerPanda.userData.head.add(bowKnot);
+
+  // visible carried bamboo stalks
+  const carryGroup = new THREE.Group();
+  carryGroup.position.set(0, 0.95, 0.55);
+  playerPanda.add(carryGroup);
+  const carryStalks = [];
+  for (let i = 0; i < 5; i++) {
+    const stalk = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.05, 0.05, 0.55, 8),
+      new THREE.MeshStandardMaterial({ color: 0xa4c75a, roughness: 0.7 })
+    );
+    stalk.rotation.x = Math.PI / 2.2;
+    stalk.position.set((i - 2) * 0.07, 0, (i % 2) * 0.04);
+    stalk.visible = false;
+    carryGroup.add(stalk);
+    carryStalks.push(stalk);
+  }
+
+  // ---- Thought bubble factory --------------------------------
+  function makeThoughtBubble() {
+    const bubble = new THREE.Group();
+    for (let i = 0; i < 2; i++) {
+      const dot = new THREE.Mesh(
+        new THREE.SphereGeometry(0.05 + i * 0.02, 10, 8),
+        new THREE.MeshBasicMaterial({ color: 0xffffff })
+      );
+      dot.position.set(-0.25 + i * 0.1, -0.25 + i * 0.1, 0);
+      bubble.add(dot);
+    }
+    const cloudMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+    const puff1 = new THREE.Mesh(new THREE.SphereGeometry(0.22, 14, 12), cloudMat); bubble.add(puff1);
+    const puff2 = new THREE.Mesh(new THREE.SphereGeometry(0.16, 14, 12), cloudMat); puff2.position.set(0.18, 0.05, 0); bubble.add(puff2);
+    const puff3 = new THREE.Mesh(new THREE.SphereGeometry(0.14, 14, 12), cloudMat); puff3.position.set(-0.18, 0.08, 0); bubble.add(puff3);
+    const puff4 = new THREE.Mesh(new THREE.SphereGeometry(0.13, 14, 12), cloudMat); puff4.position.set(0.05, 0.18, 0); bubble.add(puff4);
+
+    const iconStalk = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.04, 0.04, 0.22, 8),
+      new THREE.MeshBasicMaterial({ color: 0x7cb342 })
+    );
+    iconStalk.position.set(0, 0, 0.15);
+    bubble.add(iconStalk);
+    const iconLeaf = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.12, 0.06),
+      new THREE.MeshBasicMaterial({ color: 0x9ccc65, side: THREE.DoubleSide })
+    );
+    iconLeaf.position.set(0.08, 0.08, 0.16);
+    iconLeaf.rotation.z = -0.5;
+    bubble.add(iconLeaf);
+
+    bubble.visible = false;
+    return bubble;
+  }
+
+  // ---- NPC pandas (with hunger) -------------------------------
+  const npcPandas = [];
+  const npcSpots = [
+    { x: -6, z: -3 }, { x: 5, z: -7 }, { x: -12, z: 5 },
+    { x: 12, z: -1 }, { x: -2, z: 11 },
+  ];
+  npcSpots.forEach((spot, idx) => {
+    const p = makePanda();
+    p.position.set(spot.x, 0, spot.z);
+    p.rotation.y = Math.random() * Math.PI * 2;
+    p.userData.basePos = new THREE.Vector3(spot.x, 0, spot.z);
+    p.userData.bobPhase = Math.random() * Math.PI * 2;
+    p.userData.waved = false;
+    p.userData.waveTime = 0;
+    p.userData.hunger = idx < 2 ? 70 + Math.random() * 20 : 20 + Math.random() * 30;
+    p.userData.fedTime = 0;
+    p.userData.heartBurst = [];
+    scene.add(p); npcPandas.push(p);
+
+    const snack = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.06, 0.06, 0.6, 8),
+      new THREE.MeshStandardMaterial({ color: 0xa4c75a, roughness: 0.7 })
+    );
+    snack.position.set(0, 0.95, 0.45); snack.rotation.x = Math.PI / 3;
+    p.add(snack);
+    p.userData.snack = snack;
+
+    const bubble = makeThoughtBubble();
+    scene.add(bubble);
+    p.userData.bubble = bubble;
+
+    for (let h = 0; h < 5; h++) {
+      const heart = new THREE.Mesh(
+        new THREE.SphereGeometry(0.1, 10, 8),
+        new THREE.MeshBasicMaterial({ color: 0xff6f9c, transparent: true, opacity: 0 })
+      );
+      heart.visible = false;
+      scene.add(heart);
+      p.userData.heartBurst.push({ mesh: heart, life: 0, vx: 0, vy: 0, vz: 0 });
+    }
+  });
+
+  // ---- Dragonfly factory --------------------------------------
+  function makeDragonfly(scale = 1) {
+    const d = new THREE.Group();
+    const body = new THREE.Mesh(
+      new THREE.SphereGeometry(0.08, 12, 10),
+      new THREE.MeshStandardMaterial({ color: 0x2ec4b6, roughness: 0.4, metalness: 0.3 })
+    );
+    body.scale.set(1, 1, 4); d.add(body);
+    const head = new THREE.Mesh(
+      new THREE.SphereGeometry(0.09, 12, 10),
+      new THREE.MeshStandardMaterial({ color: 0x1f8f85, roughness: 0.4 })
+    );
+    head.position.z = 0.32; d.add(head);
+    [-1, 1].forEach(side => {
+      const eye = new THREE.Mesh(
+        new THREE.SphereGeometry(0.05, 10, 8),
+        new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.2, metalness: 0.6 })
+      );
+      eye.position.set(0.06 * side, 0.03, 0.36); d.add(eye);
+    });
+    const tail = new THREE.Mesh(
+      new THREE.SphereGeometry(0.05, 10, 8),
+      new THREE.MeshStandardMaterial({ color: 0x16a39a, roughness: 0.4 })
+    );
+    tail.position.z = -0.34; d.add(tail);
+
+    const wingMat = new THREE.MeshStandardMaterial({
+      color: 0xeaf6ff, transparent: true, opacity: 0.55, roughness: 0.1,
+      metalness: 0.2, side: THREE.DoubleSide, emissive: 0xb8e0ff, emissiveIntensity: 0.15
+    });
+    const wings = [];
+    [{z:0.05,side:1},{z:0.05,side:-1},{z:-0.10,side:1},{z:-0.10,side:-1}].forEach(wp => {
+      const wingGeo = new THREE.PlaneGeometry(0.55, 0.22);
+      wingGeo.translate(0.275 * wp.side, 0, 0);
+      const wing = new THREE.Mesh(wingGeo, wingMat);
+      wing.position.set(0, 0.04, wp.z); d.add(wing);
+      wings.push({ mesh: wing, side: wp.side });
+    });
+    d.scale.setScalar(scale);
+    return { group: d, wings };
+  }
+
+  // autonomous (NPC) dragonfly — always visible, flits around
+  const npcDf = makeDragonfly(1);
+  scene.add(npcDf.group);
+  npcDf.group.position.set(2, 2.2, 2);
+
+  // PLAYER dragonfly (only visible in dragonfly mode)
+  const playerDf = makeDragonfly(1.6);
+  scene.add(playerDf.group);
+  playerDf.group.visible = false;
+
+  // glowing trail behind player dragonfly
+  const trail = [];
+  const TRAIL_LEN = 12;
+  for (let i = 0; i < TRAIL_LEN; i++) {
+    const dot = new THREE.Mesh(
+      new THREE.SphereGeometry(0.08, 6, 4),
+      new THREE.MeshBasicMaterial({ color: 0xb384ff, transparent: true, opacity: 0 })
+    );
+    scene.add(dot);
+    trail.push({ mesh: dot, age: 99 });
+  }
+
+  // ---- Mosquitos (only spawn in dragonfly mode) ---------------
+  const mosquitos = [];
+  const MOSQUITO_TARGET = 12;
+
+  function makeMosquito() {
+    const g = new THREE.Group();
+    const body = new THREE.Mesh(
+      new THREE.SphereGeometry(0.07, 8, 6),
+      new THREE.MeshStandardMaterial({ color: 0x4a3a2a, roughness: 0.85 })
+    );
+    body.scale.set(1, 0.9, 1.4);
+    g.add(body);
+
+    const wingMat = new THREE.MeshStandardMaterial({
+      color: 0xffffff, transparent: true, opacity: 0.45, side: THREE.DoubleSide
+    });
+    const wings = [];
+    for (let s = -1; s <= 1; s += 2) {
+      const w = new THREE.Mesh(new THREE.PlaneGeometry(0.14, 0.07), wingMat);
+      w.position.set(0.07 * s, 0.05, 0);
+      g.add(w); wings.push(w);
+    }
+    for (let i = 0; i < 3; i++) {
+      const leg = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.005, 0.005, 0.12, 4),
+        new THREE.MeshStandardMaterial({ color: 0x2c2418 })
+      );
+      leg.position.set((i - 1) * 0.04, -0.08, 0);
+      g.add(leg);
+    }
+
+    g.position.set(
+      (Math.random() - 0.5) * 30,
+      1.5 + Math.random() * 2.5,
+      (Math.random() - 0.5) * 30
+    );
+    g.userData = {
+      phase: Math.random() * Math.PI * 2,
+      target: new THREE.Vector3(),
+      timer: 0, wings,
+    };
+    pickMosquitoTarget(g);
+    return g;
+  }
+
+  function pickMosquitoTarget(m) {
+    m.userData.target.set(
+      m.position.x + (Math.random() - 0.5) * 8,
+      1.3 + Math.random() * 2.5,
+      m.position.z + (Math.random() - 0.5) * 8
+    );
+    m.userData.target.x = Math.max(-22, Math.min(22, m.userData.target.x));
+    m.userData.target.z = Math.max(-22, Math.min(22, m.userData.target.z));
+    m.userData.timer = 1.2 + Math.random() * 1.5;
+  }
+
+  function despawnAllMosquitos() {
+    mosquitos.forEach(m => scene.remove(m));
+    mosquitos.length = 0;
+  }
+
+  // ---- Sparkle particles --------------------------------------
+  const sparkles = [];
+  function makeSparkle(pos, color = 0xffffff, count = 8, spread = 1) {
+    for (let i = 0; i < count; i++) {
+      const s = new THREE.Mesh(
+        new THREE.SphereGeometry(0.07, 6, 4),
+        new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 1 })
+      );
+      s.position.copy(pos);
+      s.userData = {
+        vel: new THREE.Vector3(
+          (Math.random() - 0.5) * 4 * spread,
+          Math.random() * 3 + 1,
+          (Math.random() - 0.5) * 4 * spread
+        ),
+        life: 0.6, maxLife: 0.6,
+      };
+      scene.add(s);
+      sparkles.push(s);
+    }
+  }
+  function updateSparkles(dt) {
+    for (let i = sparkles.length - 1; i >= 0; i--) {
+      const s = sparkles[i];
+      s.userData.life -= dt;
+      if (s.userData.life <= 0) { scene.remove(s); sparkles.splice(i, 1); continue; }
+      s.position.x += s.userData.vel.x * dt;
+      s.position.y += s.userData.vel.y * dt;
+      s.position.z += s.userData.vel.z * dt;
+      s.userData.vel.y -= 6 * dt;
+      const k = s.userData.life / s.userData.maxLife;
+      s.material.opacity = k;
+      s.scale.setScalar(0.5 + k);
+    }
+  }
+
+  // ---- Game state ---------------------------------------------
+  let playerMode = 'panda';
+  let waveCount = 0;
+  let mosquitoCount = 0;
+  let transformCooldown = 0;
+  const inventory = { bamboo: 0 };
+
+  const countEl = document.getElementById('count');
+  const bambooEl = document.getElementById('bamboo');
+  const caughtEl = document.getElementById('caught');
+  const hint = document.getElementById('hint');
+  const flash = document.getElementById('flash');
+  const toastEl = document.getElementById('toast');
+  const flyUpBtn = document.getElementById('fly-up-btn');
+  const flyDownBtn = document.getElementById('fly-down-btn');
+
+  function updateHud() {
+    countEl.textContent = waveCount;
+    bambooEl.textContent = inventory.bamboo;
+    caughtEl.textContent = mosquitoCount;
+  }
+  updateHud();
+
+  let toastTimer = null;
+  function toast(text, duration = 1600) {
+    toastEl.textContent = text;
+    toastEl.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toastEl.classList.remove('show'), duration);
+  }
+
+  // ---- Input --------------------------------------------------
+  const keys = {};
+  addEventListener('keydown', e => {
+    keys[e.code] = true;
+    if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space'].includes(e.code)) e.preventDefault();
+  });
+  addEventListener('keyup', e => { keys[e.code] = false; });
+
+  const stickBase = document.getElementById('stick-base');
+  const stickKnob = document.getElementById('stick-knob');
+  let stickActive = false;
+  const stickInput = { x: 0, y: 0 };
+  const isTouch = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
+  if (isTouch) document.body.classList.add('touch');
+
+  stickBase.addEventListener('pointerdown', e => {
+    stickActive = true;
+    stickBase.setPointerCapture && stickBase.setPointerCapture(e.pointerId);
+  });
+  addEventListener('pointermove', e => {
+    if (!stickActive) return;
+    const rect = stickBase.getBoundingClientRect();
+    const cx = rect.left + rect.width / 2, cy = rect.top + rect.height / 2;
+    let dx = e.clientX - cx, dy = e.clientY - cy;
+    const max = rect.width / 2 - 12;
+    const len = Math.hypot(dx, dy);
+    if (len > max) { dx = dx / len * max; dy = dy / len * max; }
+    stickKnob.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
+    stickInput.x = dx / max; stickInput.y = dy / max;
+  });
+  function endStick() {
+    stickActive = false; stickInput.x = 0; stickInput.y = 0;
+    stickKnob.style.transform = 'translate(-50%, -50%)';
+  }
+  addEventListener('pointerup', endStick);
+  addEventListener('pointercancel', endStick);
+
+  let touchUp = false, touchDown = false;
+  flyUpBtn.addEventListener('pointerdown', e => { e.preventDefault(); touchUp = true; });
+  flyUpBtn.addEventListener('pointerup',   () => { touchUp = false; });
+  flyUpBtn.addEventListener('pointercancel', () => { touchUp = false; });
+  flyDownBtn.addEventListener('pointerdown', e => { e.preventDefault(); touchDown = true; });
+  flyDownBtn.addEventListener('pointerup',   () => { touchDown = false; });
+  flyDownBtn.addEventListener('pointercancel', () => { touchDown = false; });
+
+  // ---- Harvest / Feed -----------------------------------------
+  function startHarvest(b) {
+    b.userData.alive = false;
+    b.userData.harvestAnim = 1;
+    b.userData.regrowTimer = 14;
+    b.userData.lastAngle = null;
+    b.userData.angleAccum = 0;
+    b.userData.progressRing.visible = false;
+    inventory.bamboo++;
+    updateHud();
+    toast("🎋 +1 bamboo!");
+    const sparklePos = b.position.clone(); sparklePos.y = 1.0;
+    makeSparkle(sparklePos, 0xa4c75a, 8, 0.6);
+  }
+
+  function feedPanda(p) {
+    inventory.bamboo--;
+    p.userData.hunger = 0;
+    p.userData.fedTime = 1.6;
+    p.userData.bubble.visible = false;
+    updateHud();
+    toast("💚 yum, thank you!");
+    p.userData.heartBurst.forEach(h => {
+      h.mesh.position.set(p.position.x, 1.6, p.position.z);
+      h.mesh.material.opacity = 1;
+      h.mesh.visible = true;
+      h.life = 1.0;
+      const a = Math.random() * Math.PI * 2;
+      h.vx = Math.cos(a) * 0.8;
+      h.vz = Math.sin(a) * 0.8;
+      h.vy = 1.5 + Math.random() * 0.8;
+    });
+    if (p.userData.snack && !p.userData.snack.visible) p.userData.snack.visible = true;
+  }
+
+  // ---- Transform ----------------------------------------------
+  function transform() {
+    if (transformCooldown > 0) return;
+    flash.classList.add('on');
+    setTimeout(() => flash.classList.remove('on'), 350);
+
+    if (playerMode === 'panda') {
+      playerMode = 'dragonfly';
+      document.body.classList.remove('panda-mode');
+      document.body.classList.add('dragonfly-mode');
+      playerDf.group.position.set(playerPanda.position.x, 2.0, playerPanda.position.z);
+      playerDf.group.rotation.y = playerPanda.rotation.y;
+      makeSparkle(playerPanda.position.clone().add(new THREE.Vector3(0, 1, 0)), 0xb384ff, 18, 1.5);
+      playerPanda.visible = false;
+      playerDf.group.visible = true;
+      while (mosquitos.length < MOSQUITO_TARGET) {
+        const m = makeMosquito(); scene.add(m); mosquitos.push(m);
+      }
+    } else {
+      playerMode = 'panda';
+      document.body.classList.remove('dragonfly-mode');
+      document.body.classList.add('panda-mode');
+      playerPanda.position.set(playerDf.group.position.x, 0, playerDf.group.position.z);
+      playerPanda.rotation.y = playerDf.group.rotation.y;
+      makeSparkle(playerDf.group.position.clone(), 0xfff1d6, 18, 1.5);
+      playerPanda.visible = true;
+      playerDf.group.visible = false;
+      despawnAllMosquitos();
+      // hide trail
+      trail.forEach(td => { td.mesh.material.opacity = 0; td.age = 99; });
+    }
+    transformCooldown = 1.2;
+  }
+
+  // ---- Hint logic ---------------------------------------------
+  const ref = () => playerMode === 'panda' ? playerPanda.position : playerDf.group.position;
+  function updateHint() {
+    const r = ref();
+    const nearPortal = Math.hypot(r.x - portalPos.x, r.z - portalPos.z) < 5;
+
+    if (playerMode === 'panda') {
+      // is anyone hungry?
+      const someHungry = npcPandas.some(p => p.userData.hunger > 50);
+      if (inventory.bamboo > 0 && someHungry) {
+        hint.textContent = 'Walk up to a hungry panda to share your bamboo 💚';
+      } else if (someHungry) {
+        hint.textContent = 'Circle around bamboo to harvest it 🎋';
+      } else if (nearPortal) {
+        hint.textContent = 'Step into the sparkly ring to fly! ✨';
+      } else {
+        hint.textContent = 'Walk to the purple portal to become a dragonfly! ✨';
+      }
+    } else {
+      if (nearPortal) {
+        hint.textContent = 'Fly into the ring to be a panda again 🐼';
+      } else {
+        hint.textContent = isTouch
+          ? '▲▼ to fly up & down — catch the bugs! 🦟'
+          : 'SPACE to fly up, SHIFT to fly down — catch bugs! 🦟';
+      }
+    }
+  }
+
+  // ---- Animation loop -----------------------------------------
+  const clock = new THREE.Clock();
+  const camLookAt = new THREE.Vector3();
+  let playerFacing = 0;
+  let walkPhase = 0;
+  const playerVel = new THREE.Vector3();
+
+  const ndf = { target: new THREE.Vector3(), timer: 0, mode: 'wander', modeTimer: 0 };
+  function pickNpcDfTarget() {
+    if (ndf.mode === 'follow') {
+      const a = Math.random() * Math.PI * 2;
+      const r = ref();
+      ndf.target.set(r.x + Math.cos(a) * 2.5, 1.6 + Math.random() * 0.8, r.z + Math.sin(a) * 2.5);
+    } else if (ndf.mode === 'pond') {
+      const a = Math.random() * Math.PI * 2;
+      ndf.target.set(pondCenter.x + Math.cos(a) * pondRadius * 0.8, 1.0 + Math.random() * 0.6, pondCenter.z + Math.sin(a) * pondRadius * 0.8);
+    } else {
+      ndf.target.set((Math.random() - 0.5) * 24, 1.4 + Math.random() * 1.6, (Math.random() - 0.5) * 24);
+    }
+  }
+  pickNpcDfTarget();
+
+  function animate() {
+    const dt = Math.min(clock.getDelta(), 0.05);
+    const t = clock.elapsedTime;
+    if (transformCooldown > 0) transformCooldown -= dt;
+
+    // INPUT
+    let inX = 0, inZ = 0, inY = 0;
+    if (keys['ArrowUp'] || keys['KeyW']) inZ -= 1;
+    if (keys['ArrowDown'] || keys['KeyS']) inZ += 1;
+    if (keys['ArrowLeft'] || keys['KeyA']) inX -= 1;
+    if (keys['ArrowRight'] || keys['KeyD']) inX += 1;
+    if (Math.abs(stickInput.x) > 0.1) inX = stickInput.x;
+    if (Math.abs(stickInput.y) > 0.1) inZ = stickInput.y;
+    if (keys['Space'] || touchUp) inY += 1;
+    if (keys['ShiftLeft'] || keys['ShiftRight'] || touchDown) inY -= 1;
+    let inLen = Math.hypot(inX, inZ);
+    if (inLen > 1) { inX /= inLen; inZ /= inLen; }
+
+    // ============================================================
+    // PANDA MODE
+    // ============================================================
+    if (playerMode === 'panda') {
+      const speed = 5.0;
+      playerVel.x += (inX * speed - playerVel.x) * Math.min(1, dt * 10);
+      playerVel.z += (inZ * speed - playerVel.z) * Math.min(1, dt * 10);
+
+      const nextX = playerPanda.position.x + playerVel.x * dt;
+      const nextZ = playerPanda.position.z + playerVel.z * dt;
+      const distToPond = Math.hypot(nextX - pondCenter.x, nextZ - pondCenter.z);
+      if (distToPond < pondRadius + 0.5) {
+        const ang = Math.atan2(playerPanda.position.z - pondCenter.z, playerPanda.position.x - pondCenter.x);
+        playerPanda.position.x = pondCenter.x + Math.cos(ang) * (pondRadius + 0.5);
+        playerPanda.position.z = pondCenter.z + Math.sin(ang) * (pondRadius + 0.5);
+        playerVel.multiplyScalar(0.3);
+      } else {
+        playerPanda.position.x = Math.max(-23, Math.min(23, nextX));
+        playerPanda.position.z = Math.max(-23, Math.min(23, nextZ));
+      }
+
+      const moveLen = Math.hypot(playerVel.x, playerVel.z);
+      if (moveLen > 0.5) {
+        const desired = Math.atan2(playerVel.x, playerVel.z);
+        let diff = desired - playerFacing;
+        while (diff > Math.PI) diff -= Math.PI * 2;
+        while (diff < -Math.PI) diff += Math.PI * 2;
+        playerFacing += diff * Math.min(1, dt * 12);
+        walkPhase += dt * 10 * (moveLen / speed);
+      } else {
+        walkPhase *= 0.9;
+      }
+      playerPanda.rotation.y = playerFacing;
+      playerPanda.position.y = Math.sin(walkPhase * 2) * 0.05 * (moveLen / speed);
+      playerPanda.userData.head.rotation.x = Math.sin(walkPhase * 2) * 0.04;
+      if (playerPanda.userData.arms[0]) {
+        playerPanda.userData.arms[0].rotation.x =  Math.sin(walkPhase) * 0.5 * (moveLen / speed);
+        playerPanda.userData.arms[1].rotation.x = -Math.sin(walkPhase) * 0.5 * (moveLen / speed);
+      }
+
+      // show carried bamboo stalks
+      for (let i = 0; i < carryStalks.length; i++) {
+        carryStalks[i].visible = i < inventory.bamboo;
+      }
+
+      // bamboo: sway, regrow, circle-to-harvest
+      bambooGroup.children.forEach(b => {
+        // regrowth bookkeeping
+        if (!b.userData.alive) {
+          if (b.userData.harvestAnim > 0) {
+            b.userData.harvestAnim -= dt * 1.8;
+            const a = Math.max(0, b.userData.harvestAnim);
+            b.scale.y = a;
+            b.scale.x = b.scale.z = 0.7 + 0.3 * a;
+            if (a <= 0) b.visible = false;
+          } else {
+            b.visible = false;
+          }
+          b.userData.regrowTimer -= dt;
+          if (b.userData.regrowTimer <= 0) {
+            b.userData.alive = true;
+            b.visible = true;
+            b.userData.growAnim = 0;
+            b.userData.harvestAnim = 0;
+          }
+          return;
+        }
+
+        // grow-in animation after regrowth
+        if (b.userData.growAnim < 1) {
+          b.userData.growAnim = Math.min(1, b.userData.growAnim + dt * 1.4);
+          b.scale.y = b.userData.growAnim;
+          b.scale.x = b.scale.z = 0.7 + 0.3 * b.userData.growAnim;
+        }
+
+        // gentle sway
+        const sway = Math.sin(t * 1.2 + b.userData.swayPhase) * 0.04;
+        b.rotation.z = b.userData.baseRotZ + sway;
+        b.rotation.x = Math.cos(t * 0.9 + b.userData.swayPhase) * 0.025;
+
+        // circling detection
+        const dx = playerPanda.position.x - b.position.x;
+        const dz = playerPanda.position.z - b.position.z;
+        const dist = Math.hypot(dx, dz);
+        const inRange = dist < 2.4;
+        const outRange = dist > 3.0;
+
+        if (inRange && moveLen > 1.0 && b.userData.growAnim >= 1) {
+          const ang = Math.atan2(dz, dx);
+          if (b.userData.lastAngle !== null) {
+            let delta = ang - b.userData.lastAngle;
+            while (delta > Math.PI) delta -= Math.PI * 2;
+            while (delta < -Math.PI) delta += Math.PI * 2;
+            b.userData.angleAccum += delta;
+          }
+          b.userData.lastAngle = ang;
+          const progress = Math.min(1, Math.abs(b.userData.angleAccum) / (Math.PI * 2));
+          if (progress > 0.02) {
+            b.userData.progressRing.visible = true;
+            b.userData.progressRing.geometry.dispose();
+            b.userData.progressRing.geometry = new THREE.RingGeometry(0.55, 0.78, 32, 1, 0, progress * Math.PI * 2);
+          }
+          if (progress >= 1) startHarvest(b);
+        } else if (outRange) {
+          b.userData.lastAngle = null;
+          b.userData.angleAccum = 0;
+          if (b.userData.progressRing.visible) b.userData.progressRing.visible = false;
+        } else if (!inRange) {
+          b.userData.lastAngle = null;
+        }
+      });
+
+      // portal entry
+      const dPortal = Math.hypot(playerPanda.position.x - portalPos.x, playerPanda.position.z - portalPos.z);
+      if (dPortal < 1.0) transform();
+
+      // panda camera
+      const camDesired = new THREE.Vector3(playerPanda.position.x, 5.2, playerPanda.position.z + 8);
+      camera.position.lerp(camDesired, Math.min(1, dt * 4));
+      camLookAt.lerp(new THREE.Vector3(playerPanda.position.x, playerPanda.position.y + 1.0, playerPanda.position.z), Math.min(1, dt * 6));
+      camera.lookAt(camLookAt);
+    }
+    // ============================================================
+    // DRAGONFLY MODE
+    // ============================================================
+    else {
+      const flySpeed = 7.0, vertSpeed = 5.0;
+      playerVel.x += (inX * flySpeed - playerVel.x) * Math.min(1, dt * 6);
+      playerVel.z += (inZ * flySpeed - playerVel.z) * Math.min(1, dt * 6);
+      playerVel.y += (inY * vertSpeed - playerVel.y) * Math.min(1, dt * 6);
+
+      playerDf.group.position.x = Math.max(-23, Math.min(23, playerDf.group.position.x + playerVel.x * dt));
+      playerDf.group.position.z = Math.max(-23, Math.min(23, playerDf.group.position.z + playerVel.z * dt));
+      playerDf.group.position.y = Math.max(0.6, Math.min(8, playerDf.group.position.y + playerVel.y * dt + Math.sin(t * 3) * 0.005));
+
+      const flyMag = Math.hypot(playerVel.x, playerVel.z);
+      if (flyMag > 1) {
+        const desired = Math.atan2(playerVel.x, playerVel.z);
+        let diff = desired - playerDf.group.rotation.y;
+        while (diff > Math.PI) diff -= Math.PI * 2;
+        while (diff < -Math.PI) diff += Math.PI * 2;
+        playerDf.group.rotation.y += diff * Math.min(1, dt * 8);
+      }
+      playerDf.group.rotation.x = -Math.max(-1, Math.min(1, playerVel.y / vertSpeed)) * 0.4;
+      playerDf.group.rotation.z = Math.max(-1, Math.min(1, inX)) * -0.3;
+
+      const flap = Math.sin(t * 60);
+      playerDf.wings.forEach(w => { w.mesh.rotation.y = flap * 0.9 * w.side; });
+
+      // trail
+      const oldest = trail.shift();
+      oldest.mesh.position.copy(playerDf.group.position);
+      oldest.mesh.position.y -= 0.05;
+      oldest.age = 0;
+      trail.push(oldest);
+      trail.forEach(td => {
+        td.age += dt;
+        const k = Math.max(0, 1 - td.age / 0.6);
+        td.mesh.material.opacity = k * 0.6;
+        td.mesh.scale.setScalar(0.4 + k * 0.7);
+      });
+
+      // top up mosquitos
+      while (mosquitos.length < MOSQUITO_TARGET) {
+        const m = makeMosquito(); scene.add(m); mosquitos.push(m);
+      }
+      for (let i = mosquitos.length - 1; i >= 0; i--) {
+        const m = mosquitos[i];
+        m.userData.timer -= dt;
+        if (m.userData.timer <= 0) pickMosquitoTarget(m);
+        const dir = m.userData.target.clone().sub(m.position);
+        const dlen = dir.length();
+        if (dlen > 0.01) dir.divideScalar(dlen);
+        const ms = 1.6;
+        m.position.x += dir.x * ms * dt + Math.sin(t * 9 + m.userData.phase) * dt * 0.6;
+        m.position.y += dir.y * ms * dt + Math.cos(t * 8 + m.userData.phase) * dt * 0.4;
+        m.position.z += dir.z * ms * dt + Math.cos(t * 9 + m.userData.phase) * dt * 0.6;
+        if (dlen > 0.1) m.rotation.y = Math.atan2(dir.x, dir.z);
+        m.userData.wings.forEach(w => { w.rotation.y = Math.sin(t * 80) * 0.6; });
+
+        const dist = m.position.distanceTo(playerDf.group.position);
+        if (dist < 0.75) {
+          makeSparkle(m.position.clone(), 0xfff1d6, 6, 0.6);
+          scene.remove(m);
+          mosquitos.splice(i, 1);
+          mosquitoCount++;
+          updateHud();
+        }
+      }
+
+      // portal exit
+      const dPortal = Math.hypot(playerDf.group.position.x - portalPos.x, playerDf.group.position.z - portalPos.z);
+      if (dPortal < 1.2 && playerDf.group.position.y < 4) transform();
+
+      // dragonfly camera
+      const camDesired = new THREE.Vector3(
+        playerDf.group.position.x,
+        playerDf.group.position.y + 3.5,
+        playerDf.group.position.z + 7
+      );
+      camera.position.lerp(camDesired, Math.min(1, dt * 4));
+      camLookAt.lerp(playerDf.group.position, Math.min(1, dt * 6));
+      camera.lookAt(camLookAt);
+    }
+
+    // ---- Shared updates ---------------------------------------
+
+    // water shimmer
+    water.material.opacity = 0.86 + Math.sin(t * 1.5) * 0.04;
+    water.position.y = 0.05 + Math.sin(t * 2) * 0.01;
+
+    // portal animation
+    portalRing.rotation.z += dt * 0.6;
+    portalInner.rotation.z -= dt * 1.0;
+    portalBeam.material.opacity = 0.18 + Math.sin(t * 2.5) * 0.06;
+    portalSparkles.forEach(s => {
+      s.userData.angle += dt * 0.8;
+      s.position.set(
+        Math.cos(s.userData.angle) * s.userData.radius,
+        s.userData.height + Math.sin(t * 2 + s.userData.angle) * 0.2,
+        Math.sin(s.userData.angle) * s.userData.radius
+      );
+    });
+    portalLight.intensity = 1.0 + Math.sin(t * 3) * 0.3;
+
+    // NPC pandas: hunger, mood, waving, feeding (panda-mode only for waving/feeding)
+    npcPandas.forEach(p => {
+      if (p.userData.hunger < 100) p.userData.hunger = Math.min(100, p.userData.hunger + dt * 1.6);
+      const isHungry = p.userData.hunger > 50;
+
+      if (p.userData.snack) p.userData.snack.visible = p.userData.hunger < 70;
+
+      // thought bubble
+      const bubble = p.userData.bubble;
+      if (isHungry) {
+        bubble.visible = true;
+        bubble.position.set(
+          p.position.x + 0.55,
+          p.position.y + 1.85 + Math.sin(t * 2 + p.userData.bobPhase) * 0.05,
+          p.position.z + 0.1
+        );
+        bubble.lookAt(camera.position);
+      } else {
+        bubble.visible = false;
+      }
+
+      // mouth: smile when not hungry, frown when hungry
+      if (p.userData.mouth) {
+        const targetZ = isHungry ? 0 : Math.PI;
+        let cur = p.userData.mouth.rotation.z;
+        let dz2 = targetZ - cur;
+        while (dz2 > Math.PI) dz2 -= 2 * Math.PI;
+        while (dz2 < -Math.PI) dz2 += 2 * Math.PI;
+        p.userData.mouth.rotation.z += dz2 * Math.min(1, dt * 5);
+      }
+
+      // slight slump when hungry
+      const slumpTarget = isHungry ? -0.1 : 0;
+      p.userData.head.position.y += ((1.15 + slumpTarget * 0.4) - p.userData.head.position.y) * Math.min(1, dt * 4);
+
+      const bobY = Math.sin(t * 1.5 + p.userData.bobPhase) * 0.04;
+      p.position.y = bobY + (p.userData.fedTime > 0 ? Math.sin(t * 14) * 0.06 : 0);
+
+      // face the player when nearby (in either mode)
+      const r = ref();
+      const dx = r.x - p.position.x;
+      const dz = r.z - p.position.z;
+      const dist = Math.hypot(dx, dz);
+      if (dist < 6) {
+        const desired = Math.atan2(dx, dz);
+        let diff = desired - p.rotation.y;
+        while (diff > Math.PI) diff -= Math.PI * 2;
+        while (diff < -Math.PI) diff += Math.PI * 2;
+        p.rotation.y += diff * Math.min(1, dt * 4);
+      }
+
+      // feeding & waving only as panda
+      if (playerMode === 'panda') {
+        if (dist < 2.3 && isHungry && inventory.bamboo > 0) feedPanda(p);
+
+        if (dist < 3.2 && !p.userData.waved && !isHungry) {
+          p.userData.waved = true;
+          p.userData.waveTime = 1.5;
+          waveCount++;
+          updateHud();
+        }
+        if (dist > 6) p.userData.waved = false;
+        if (isHungry) p.userData.waved = false;
+      }
+
+      if (p.userData.waveTime > 0) {
+        p.userData.waveTime -= dt;
+        const w = Math.max(0, p.userData.waveTime / 1.5);
+        const a = Math.sin((1 - w) * Math.PI * 4) * w;
+        if (p.userData.arms[1]) {
+          p.userData.arms[1].rotation.z = -1.4 + a * 0.5;
+          p.userData.arms[1].position.y = 0.85;
+        }
+      } else if (p.userData.arms[1]) {
+        p.userData.arms[1].rotation.z *= 0.9;
+        p.userData.arms[1].position.y += (0.55 - p.userData.arms[1].position.y) * 0.1;
+      }
+
+      if (p.userData.fedTime > 0) p.userData.fedTime -= dt;
+
+      p.userData.heartBurst.forEach(h => {
+        if (h.life > 0) {
+          h.life -= dt * 0.9;
+          h.mesh.position.x += h.vx * dt;
+          h.mesh.position.y += h.vy * dt;
+          h.mesh.position.z += h.vz * dt;
+          h.vy -= dt * 1.5;
+          h.mesh.material.opacity = Math.max(0, h.life);
+          h.mesh.scale.setScalar(0.6 + (1 - h.life) * 0.7);
+          if (h.life <= 0) h.mesh.visible = false;
+        }
+      });
+    });
+
+    // NPC dragonfly autonomous behavior
+    ndf.modeTimer -= dt;
+    if (ndf.modeTimer <= 0) {
+      const r = Math.random();
+      ndf.mode = r < 0.5 ? 'follow' : (r < 0.8 ? 'wander' : 'pond');
+      ndf.modeTimer = 4 + Math.random() * 5;
+      pickNpcDfTarget();
+    }
+    ndf.timer -= dt;
+    if (ndf.timer <= 0 || npcDf.group.position.distanceTo(ndf.target) < 0.5) {
+      pickNpcDfTarget(); ndf.timer = 1.2 + Math.random() * 1.5;
+    }
+    const toT = ndf.target.clone().sub(npcDf.group.position);
+    const ll = toT.length();
+    if (ll > 0.01) toT.divideScalar(ll);
+    npcDf.group.position.x += toT.x * 3.0 * dt;
+    npcDf.group.position.y += toT.y * 3.0 * dt + Math.sin(t * 4) * 0.01;
+    npcDf.group.position.z += toT.z * 3.0 * dt;
+    if (ll > 0.1) {
+      npcDf.group.rotation.y = Math.atan2(toT.x, toT.z);
+      npcDf.group.rotation.x = -toT.y * 0.4;
+    }
+    const npcFlap = Math.sin(t * 50);
+    npcDf.wings.forEach(w => { w.mesh.rotation.y = npcFlap * 0.9 * w.side; });
+
+    updateSparkles(dt);
+    updateHint();
+    renderer.render(scene, camera);
+    requestAnimationFrame(animate);
+  }
+  animate();
+
+  addEventListener('resize', () => {
+    camera.aspect = innerWidth / innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(innerWidth, innerHeight);
+  });
+  </script>
+</body>
+</html>

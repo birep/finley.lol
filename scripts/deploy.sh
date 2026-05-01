@@ -128,12 +128,50 @@ else
     echo "✅ Pages project created"
 fi
 
+# Upload files to Pages
+echo ""
+echo "Uploading files via wrangler..."
+if ! command -v npx >/dev/null 2>&1; then
+    echo "❌ npx not found — install Node.js to enable file upload"
+    exit 1
+fi
+CLOUDFLARE_API_TOKEN="$CLOUDFLARE_API_TOKEN" \
+CLOUDFLARE_ACCOUNT_ID="$CLOUDFLARE_ACCOUNT_ID" \
+  npx --yes wrangler@latest pages deploy "$GAME_DIR" \
+    --project-name="$GAME_NAME" \
+    --branch="$BRANCH" \
+    --commit-dirty=true
+
 # Add DNS record
 echo ""
 echo "Setting up DNS..."
 ./scripts/add-dns.sh "$GAME_NAME"
 
+# Attach custom domain to the Pages project (idempotent)
+CUSTOM_DOMAIN="${GAME_NAME}.finley.lol"
+echo ""
+echo "Attaching custom domain ${CUSTOM_DOMAIN} to Pages project..."
+DOMAIN_ATTACHED=$(curl -s -X GET "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/pages/projects/${GAME_NAME}/domains" \
+  -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+  | python3 -c "
+import sys, json
+d = json.load(sys.stdin)
+target = '${CUSTOM_DOMAIN}'
+attached = any(x.get('name') == target for x in d.get('result', []))
+print('true' if attached else 'false')
+")
+
+if [ "$DOMAIN_ATTACHED" = "true" ]; then
+    echo "✅ Custom domain already attached"
+else
+    curl -s -X POST "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/pages/projects/${GAME_NAME}/domains" \
+      -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+      -H "Content-Type: application/json" \
+      -d "{\"name\":\"${CUSTOM_DOMAIN}\"}" > /dev/null
+    echo "✅ Custom domain attached (cert provisioning may take ~30–90s)"
+fi
+
 echo ""
 echo "=== Deploy Complete ==="
 echo ""
-echo "Visit: https://${GAME_NAME}.finley.lol"
+echo "Visit: https://${CUSTOM_DOMAIN}"

@@ -95,7 +95,7 @@
 
   #hud-bottom {
     display: grid;
-    grid-template-columns: repeat(7, 1fr);
+    grid-template-columns: repeat(8, 1fr);
     gap: 3px;
     padding: 4px;
     background: var(--paper);
@@ -401,6 +401,18 @@
       <span class="lbl">BUCKET</span>
       <span class="cost">25</span>
     </button>
+    <button class="tower-btn" data-tower="octopus">
+      <svg width="36" height="36" viewBox="0 0 40 40">
+        <path d="M10 30 Q8 36 4 36 M14 32 Q12 38 8 38 M20 33 Q20 39 16 39 M26 32 Q28 38 32 38 M30 30 Q32 36 36 36" fill="none" stroke="#a256d6" stroke-width="3" stroke-linecap="round"/>
+        <path d="M8 22 Q8 8 20 8 Q32 8 32 22 Q32 28 28 30 L12 30 Q8 28 8 22 Z" fill="#a256d6" stroke="#3a2a1a" stroke-width="2"/>
+        <circle cx="15" cy="20" r="2.5" fill="#fff"/>
+        <circle cx="25" cy="20" r="2.5" fill="#fff"/>
+        <circle cx="15" cy="20" r="1.2" fill="#3a2a1a"/>
+        <circle cx="25" cy="20" r="1.2" fill="#3a2a1a"/>
+      </svg>
+      <span class="lbl">OCTOPUS</span>
+      <span class="cost">50</span>
+    </button>
     <button class="tower-btn" data-tower="sand">
       <svg width="36" height="36" viewBox="0 0 40 40">
         <path d="M4 34 Q12 18 20 26 Q28 18 36 34 Z" fill="#f0cd78" stroke="#3a2a1a" stroke-width="2" stroke-linejoin="round"/>
@@ -663,9 +675,14 @@ const TOWERS = {
     projSpeed: 620, projRadius: 5, projColor: '#7ec8ff',
     splash: 0,
     levels: [
-      { cost: 20, range: 130, damage: 6,  cooldown: 0.45 },
-      { cost: 25, range: 150, damage: 8,  cooldown: 0.32 },
-      { cost: 45, range: 170, damage: 10, cooldown: 0.22 },
+      { cost: 20,   range: 130, damage: 6,   cooldown: 0.45 },
+      { cost: 25,   range: 150, damage: 8,   cooldown: 0.32 },
+      { cost: 45,   range: 170, damage: 11,  cooldown: 0.22 },
+      { cost: 85,   range: 190, damage: 16,  cooldown: 0.18 },
+      { cost: 160,  range: 210, damage: 22,  cooldown: 0.15 },
+      { cost: 290,  range: 230, damage: 32,  cooldown: 0.12 },
+      { cost: 520,  range: 250, damage: 46,  cooldown: 0.10 },
+      { cost: 950,  range: 270, damage: 68,  cooldown: 0.08 },
     ],
   },
   balloon: {
@@ -674,9 +691,14 @@ const TOWERS = {
     projSpeed: 320, projRadius: 9, projColor: '#1e6fb0',
     splash: 45,
     levels: [
-      { cost: 40,  range: 170, damage: 14, cooldown: 1.3, shots: 1 },
-      { cost: 55,  range: 195, damage: 16, cooldown: 1.2, shots: 2 }, // double shot
-      { cost: 100, range: 220, damage: 20, cooldown: 1.1, shots: 3 }, // triple shot
+      { cost: 40,   range: 170, damage: 14,  cooldown: 1.3,  shots: 1 },
+      { cost: 55,   range: 195, damage: 16,  cooldown: 1.2,  shots: 2 },
+      { cost: 100,  range: 220, damage: 20,  cooldown: 1.1,  shots: 3 },
+      { cost: 190,  range: 245, damage: 28,  cooldown: 1.0,  shots: 3 },
+      { cost: 340,  range: 270, damage: 38,  cooldown: 0.9,  shots: 4 },
+      { cost: 600,  range: 290, damage: 50,  cooldown: 0.8,  shots: 4 },
+      { cost: 1050, range: 310, damage: 68,  cooldown: 0.75, shots: 5 },
+      { cost: 1800, range: 330, damage: 92,  cooldown: 0.7,  shots: 5 },
     ],
   },
   sniper: {
@@ -685,10 +707,14 @@ const TOWERS = {
     projColor: '#7ec8ff',
     pierces: true,
     levels: [
-      // Long range, charges up, then fires a piercing blast along a line
-      { cost: 60,  range: 320, damage: 18, chargeTime: 3.5, beamWidth: 14 },
-      { cost: 75,  range: 360, damage: 26, chargeTime: 3.0, beamWidth: 16 },
-      { cost: 130, range: 420, damage: 40, chargeTime: 2.5, beamWidth: 20 },
+      { cost: 60,   range: 320, damage: 18,  chargeTime: 3.5, beamWidth: 14 },
+      { cost: 75,   range: 360, damage: 26,  chargeTime: 3.0, beamWidth: 16 },
+      { cost: 130,  range: 420, damage: 40,  chargeTime: 2.5, beamWidth: 20 },
+      { cost: 240,  range: 460, damage: 62,  chargeTime: 2.2, beamWidth: 22 },
+      { cost: 430,  range: 500, damage: 92,  chargeTime: 1.9, beamWidth: 24 },
+      { cost: 760,  range: 540, damage: 140, chargeTime: 1.7, beamWidth: 26 },
+      { cost: 1300, range: 580, damage: 210, chargeTime: 1.5, beamWidth: 28 },
+      { cost: 2200, range: 620, damage: 320, chargeTime: 1.3, beamWidth: 32 },
     ],
   },
   radar: {
@@ -696,9 +722,12 @@ const TOWERS = {
     color: '#22c55e',
     reveals: true,
     levels: [
-      { cost: 30, range: 180 },
-      { cost: 40, range: 290 },
-      { cost: 75, range: 420 },
+      { cost: 30,  range: 180 },
+      { cost: 40,  range: 230 },
+      { cost: 75,  range: 290 },
+      { cost: 140, range: 350 },
+      { cost: 250, range: 410 },
+      { cost: 440, range: 470 },
     ],
   },
   shovel: {
@@ -706,10 +735,33 @@ const TOWERS = {
     color: '#ffcc33',
     generates: true,
     levels: [
-      { cost: 25, range: 0,   generateRate: 3.5, generateAmount: 1 },
-      { cost: 30, range: 0,   generateRate: 2.5, generateAmount: 1 },
-      // Auto-shovel: still generates sand, and tosses a free sand pile onto a random spot on the path within range every ~30s
-      { cost: 70, range: 260, generateRate: 2.3, generateAmount: 2, autoShovel: true, autoShovelInterval: 30 },
+      // 10 levels — auto-throws sand from level 1, gets faster every upgrade
+      { cost: 25,   range: 150, generateRate: 4.0, generateAmount: 1, autoShovel: true, autoShovelInterval: 30 },
+      { cost: 30,   range: 170, generateRate: 3.5, generateAmount: 1, autoShovel: true, autoShovelInterval: 24 },
+      { cost: 50,   range: 190, generateRate: 3.0, generateAmount: 1, autoShovel: true, autoShovelInterval: 19 },
+      { cost: 85,   range: 210, generateRate: 2.6, generateAmount: 1, autoShovel: true, autoShovelInterval: 15 },
+      { cost: 140,  range: 230, generateRate: 2.3, generateAmount: 1, autoShovel: true, autoShovelInterval: 12 },
+      { cost: 230,  range: 250, generateRate: 2.0, generateAmount: 1, autoShovel: true, autoShovelInterval: 10 },
+      { cost: 380,  range: 270, generateRate: 1.7, generateAmount: 2, autoShovel: true, autoShovelInterval: 8 },
+      { cost: 620,  range: 290, generateRate: 1.4, generateAmount: 2, autoShovel: true, autoShovelInterval: 7 },
+      { cost: 1000, range: 310, generateRate: 1.2, generateAmount: 2, autoShovel: true, autoShovelInterval: 6 },
+      { cost: 1600, range: 340, generateRate: 1.0, generateAmount: 3, autoShovel: true, autoShovelInterval: 5 },
+    ],
+  },
+  octopus: {
+    name: 'Octopus',
+    color: '#a256d6',
+    holds: true,
+    levels: [
+      // Tentacles grab nearest enemies in range — slow + continuous tick damage.
+      // Strategy: lockdown / DPS at choke points; can't see ghost crabs without a Radar nearby.
+      { cost: 50,   range: 110, damage: 5,   tickRate: 0.3,  slow: 0.45, tentacles: 1 },
+      { cost: 65,   range: 125, damage: 7,   tickRate: 0.28, slow: 0.50, tentacles: 1 },
+      { cost: 110,  range: 140, damage: 10,  tickRate: 0.26, slow: 0.55, tentacles: 2 },
+      { cost: 200,  range: 155, damage: 14,  tickRate: 0.24, slow: 0.60, tentacles: 2 },
+      { cost: 360,  range: 170, damage: 19,  tickRate: 0.22, slow: 0.65, tentacles: 3 },
+      { cost: 640,  range: 185, damage: 26,  tickRate: 0.20, slow: 0.70, tentacles: 3 },
+      { cost: 1100, range: 200, damage: 36,  tickRate: 0.18, slow: 0.75, tentacles: 4 },
     ],
   },
 };
@@ -744,8 +796,8 @@ function generateWave(n) {
   const hasBigWave = !isBoss && n >= 3 && (n % 3 === 0 || n % 7 === 0);
 
   // Difficulty multipliers applied to spawned enemies
-  const hpMul = 1 + (n - 1) * 0.11;
-  const rewardMul = 1 + (n - 1) * 0.06;
+  const hpMul = 1 + (n - 1) * 0.13;
+  const rewardMul = 1 + (n - 1) * 0.05;
 
   const events = [];
 
@@ -753,6 +805,8 @@ function generateWave(n) {
     const numBosses = 1 + Math.floor((n - 5) / 10);
     const softenUp = Math.min(14, 6 + Math.floor(n / 2));
     const bossConch = n >= 5 ? Math.min(3, 1 + Math.floor((n - 5) / 10)) : 0;
+    const numPuffer = n >= 10 ? Math.min(8, Math.floor((n - 5) / 5) + 1) : 0;
+    const numOil = n >= 15 ? Math.min(4, Math.floor((n - 10) / 5)) : 0;
     // First conch leads so it reaches the towers before the pack
     const packDelay = bossConch > 0 ? 5 : 0;
     if (bossConch > 0) {
@@ -763,6 +817,8 @@ function generateWave(n) {
     }
     events.push(...seq(softenUp, 'crab', Math.max(0.25, 0.55 - n * 0.02), packDelay));
     events.push(...seq(Math.min(10, 3 + Math.floor(n / 3)), 'ghost', 0.5, packDelay + 3));
+    if (numPuffer > 0) events.push(...seq(numPuffer, 'puffer', 1.0, packDelay + 4));
+    if (numOil > 0) events.push(...seq(numOil, 'oilbarrel', 5, packDelay + 6));
     for (let i = 0; i < numBosses; i++) {
       events.push({ type: 'boss', delay: packDelay + 7 + i * 10 });
     }
@@ -775,6 +831,8 @@ function generateWave(n) {
     const numGhost = n >= 3 ? Math.floor(n * 0.7) : 0;
     const numJelly = n >= 2 ? Math.floor(n * 0.55) : 0;
     const numFish = n >= 4 ? Math.floor(n * 0.9) : 0;
+    const numPuffer = n >= 7 ? Math.max(1, Math.floor((n - 5) * 0.45)) : 0;
+    const numOil = n >= 11 ? Math.max(1, Math.floor((n - 9) * 0.3)) : 0;
 
     // Conch leads the wave so it has time to reach the towers and block beams
     // before the rest of the pack catches up
@@ -791,6 +849,8 @@ function generateWave(n) {
     if (numGhost > 0) events.push(...seq(numGhost, 'ghost', baseInterval * 1.2, packDelay + 2));
     if (numJelly > 0) events.push(...seq(numJelly, 'jelly', baseInterval * 1.5, packDelay + 4));
     if (numFish > 0) events.push(...seq(numFish, 'fish', baseInterval * 0.6, packDelay + 6));
+    if (numPuffer > 0) events.push(...seq(numPuffer, 'puffer', baseInterval * 1.8, packDelay + 5));
+    if (numOil > 0) events.push(...seq(numOil, 'oilbarrel', baseInterval * 6, packDelay + 8));
   }
 
   return {
@@ -808,18 +868,35 @@ function generateWave(n) {
 // ENEMY DEFINITIONS
 // immune: list of tower types whose projectiles bounce off harmlessly
 // ============================================================
+// Oil barrel `oilRadius` and `oilSlow` describe the aura that slows nearby towers' fire rate.
+const OIL_AURA_RADIUS = 110;
+const OIL_AURA_SLOW = 0.55; // towers in oil aura fire at 1 / (1 + 0.55) ≈ 65% of normal rate
 const ENEMIES = {
-  crab:  { hp: 16, speed: 55,  reward: 4,  radius: 18, damage: 1, name: 'Crab' },
-  ghost: { hp: 14, speed: 75,  reward: 7,  radius: 17, damage: 1, name: 'Ghost Crab', ghost: true },
-  jelly: { hp: 30, speed: 35,  reward: 8,  radius: 22, damage: 2, name: 'Jellyfish', wobble: true, immune: ['squirt'] },
-  fish:  { hp: 10, speed: 110, reward: 4,  radius: 14, damage: 1, name: 'Fish', immune: ['balloon'] },
-  conch: { hp: 80, speed: 32,  reward: 22, radius: 60, damage: 3, name: 'Conch Shell', immune: ['squirt', 'sniper'] },
-  boss:  { hp: 220,speed: 30,  reward: 80, radius: 38, damage: 5, name: 'Wave King' },
+  crab:      { hp: 16,  speed: 55,  reward: 4,  radius: 18, damage: 1, name: 'Crab' },
+  ghost:     { hp: 14,  speed: 75,  reward: 7,  radius: 17, damage: 1, name: 'Ghost Crab', ghost: true },
+  jelly:     { hp: 30,  speed: 35,  reward: 8,  radius: 22, damage: 2, name: 'Jellyfish', wobble: true, immune: ['squirt'] },
+  fish:      { hp: 10,  speed: 110, reward: 4,  radius: 14, damage: 1, name: 'Fish', immune: ['balloon'] },
+  puffer:    { hp: 38,  speed: 50,  reward: 11, radius: 19, damage: 2, name: 'Puffer Fish', immune: ['squirt'] },
+  oilbarrel: { hp: 65,  speed: 26,  reward: 24, radius: 22, damage: 3, name: 'Oil Barrel', oilAura: true },
+  conch:     { hp: 80,  speed: 32,  reward: 22, radius: 60, damage: 3, name: 'Conch Shell', immune: ['squirt', 'sniper'] },
+  boss:      { hp: 220, speed: 30,  reward: 80, radius: 38, damage: 5, name: 'Wave King' },
 };
 
 // ============================================================
 // GAME CLASSES
 // ============================================================
+// Towers within an oil-barrel aura tick all time-driven things slower.
+function getOilMul(tower) {
+  for (const e of state.enemies) {
+    if (e.dead || !e.oilAura) continue;
+    const ep = e.getPos();
+    if (Math.hypot(ep.x - tower.x, ep.y - tower.y) < OIL_AURA_RADIUS + e.radius) {
+      return 1 - OIL_AURA_SLOW;
+    }
+  }
+  return 1;
+}
+
 class Enemy {
   constructor(type, hpMul = 1, rewardMul = 1) {
     this.type = type;
@@ -834,14 +911,20 @@ class Enemy {
     this.ghost = !!def.ghost;
     this.wobble = !!def.wobble;
     this.immune = def.immune || [];
+    this.oilAura = !!def.oilAura;
     this.dist = 0;
     this.dead = false;
     this.revealed = 0; // time remaining revealed
     this.wobbleT = Math.random() * Math.PI * 2;
     this.slowT = 0;
+    this.slowAmount = 0; // 0..1 — fraction of speed removed
     this.flashT = 0;
     this.blockedT = 0; // shows "blocked" indicator
     this.spawnT = 0;
+  }
+  applySlow(amount, duration) {
+    if (amount > this.slowAmount) this.slowAmount = amount;
+    if (duration > this.slowT) this.slowT = duration;
   }
   update(dt) {
     this.spawnT += dt;
@@ -865,7 +948,9 @@ class Enemy {
     let speed = this.baseSpeed;
     if (this.slowT > 0) {
       this.slowT -= dt;
-      speed *= 0.45;
+      speed *= Math.max(0.05, 1 - this.slowAmount);
+    } else {
+      this.slowAmount = 0;
     }
     this.dist += speed * dt;
     this.wobbleT += dt * 3;
@@ -905,7 +990,14 @@ class Enemy {
       this.dead = true;
       state.coins += this.reward;
       const p = this.getPos();
-      spawnParticles(p.x, p.y, this.type === 'jelly' ? '#ff9ec4' : '#e23e3e', 10);
+      // Splash-based death effect — water spray, no gore
+      const accent = this.type === 'jelly' ? '#ff9ec4'
+                   : this.type === 'puffer' ? '#ffd968'
+                   : this.type === 'oilbarrel' ? '#3a2a1a'
+                   : '#7ec8ff';
+      spawnParticles(p.x, p.y, accent, 8);
+      spawnParticles(p.x, p.y, '#ffffff', 8);
+      spawnSplash(p.x, p.y, 22 + this.radius * 0.4);
       floatText(p.x, p.y, '+' + this.reward, '#ffcc33');
       updateHUD();
     }
@@ -958,9 +1050,13 @@ class Tower {
 
     const def = TOWERS[this.type];
     const s = this.stats();
+    // Oil aura from nearby oil barrels slows down everything time-driven on this tower
+    const oilMul = getOilMul(this);
+    const effDt = dt * oilMul;
+    this.oiled = oilMul < 0.999;
     if (def.generates) {
       // Regular sand generation
-      this.generateT += dt;
+      this.generateT += effDt;
       if (this.generateT >= s.generateRate) {
         this.generateT = 0;
         state.sand += s.generateAmount;
@@ -970,7 +1066,7 @@ class Tower {
       // Auto-shovel: tosses a sand pile onto the path within range every N seconds
       if (s.autoShovel) {
         if (this.autoShovelT === undefined) this.autoShovelT = 0;
-        this.autoShovelT += dt;
+        this.autoShovelT += effDt;
         if (this.autoShovelT >= s.autoShovelInterval) {
           this.autoShovelT = 0;
           this.tossAutoSandPile(s);
@@ -979,6 +1075,57 @@ class Tower {
       return;
     }
     if (def.reveals) return; // radar passive
+
+    // Octopus — grabs up to N targets, slows + tick damage
+    if (def.holds) {
+      this.tickT = (this.tickT || 0) + effDt;
+      // Validate existing tentacle targets
+      this.octopusTargets = (this.octopusTargets || []).filter(e => {
+        if (e.dead || !e.isTargetable()) return false;
+        const ep = e.getPos();
+        return Math.hypot(ep.x - this.x, ep.y - this.y) <= this.range;
+      });
+      // Find new targets up to tentacles count, prefer furthest along path
+      if (this.octopusTargets.length < s.tentacles) {
+        const candidates = [];
+        for (const e of state.enemies) {
+          if (e.dead || !e.isTargetable()) continue;
+          if (this.octopusTargets.includes(e)) continue;
+          const ep = e.getPos();
+          if (Math.hypot(ep.x - this.x, ep.y - this.y) <= this.range) candidates.push(e);
+        }
+        candidates.sort((a, b) => b.dist - a.dist);
+        while (this.octopusTargets.length < s.tentacles && candidates.length > 0) {
+          this.octopusTargets.push(candidates.shift());
+        }
+      }
+      // Apply slow every frame to grabbed enemies
+      for (const e of this.octopusTargets) {
+        e.applySlow(s.slow, 0.4);
+      }
+      // Periodic tick damage
+      if (this.tickT >= s.tickRate && this.octopusTargets.length > 0) {
+        this.tickT = 0;
+        this.fireAnim = 1;
+        for (const e of this.octopusTargets) {
+          e.takeDamage(s.damage, this.type);
+          const ep = e.getPos();
+          state.particles.push({
+            x: ep.x + (Math.random()-0.5)*10,
+            y: ep.y + (Math.random()-0.5)*10,
+            vx: (Math.random()-0.5)*40,
+            vy: -50 - Math.random()*30,
+            life: 0.45, maxLife: 0.45,
+            color: '#c879f0', r: 2.4,
+          });
+        }
+      }
+      if (this.octopusTargets.length > 0) {
+        const ep = this.octopusTargets[0].getPos();
+        this.angle = Math.atan2(ep.y - this.y, ep.x - this.x);
+      }
+      return;
+    }
 
     // Sniper — charge mechanic. Charges continuously when any target is in range.
     if (def.pierces) {
@@ -1002,7 +1149,7 @@ class Tower {
         while (da > Math.PI) da -= Math.PI * 2;
         while (da < -Math.PI) da += Math.PI * 2;
         this.angle += da * Math.min(1, dt * 6);
-        this.charge = Math.min(s.chargeTime, this.charge + dt);
+        this.charge = Math.min(s.chargeTime, this.charge + effDt);
         // Fire when full AND aim is close enough
         if (this.charge >= s.chargeTime && Math.abs(da) < 0.15) {
           this.fireSniper(p, s);
@@ -1016,7 +1163,7 @@ class Tower {
       return;
     }
 
-    if (this.cooldown > 0) this.cooldown -= dt;
+    if (this.cooldown > 0) this.cooldown -= effDt;
 
     // Find target
     if (!this.target || this.target.dead || !this.target.isTargetable() ||
@@ -1308,7 +1455,7 @@ class SandWall {
         if (e.dead) continue;
         const ep = e.getPos();
         if (Math.hypot(ep.x - this.x, ep.y - this.y) < this.slowRadius + e.radius) {
-          e.slowT = 0.3;
+          e.applySlow(0.55, 0.3);
         }
       }
     }
@@ -1660,30 +1807,6 @@ document.getElementById('start-btn').addEventListener('click', () => {
 });
 document.getElementById('restart').addEventListener('click', () => location.reload());
 
-// Called automatically every 20 waves to shuffle the map. Preserves run progress.
-function shuffleStage() {
-  if (state.gameOver) return;
-  generateStage(Math.floor(Math.random() * 1e9));
-  // Clear position-dependent state, keep progress
-  state.towers = [];
-  state.sandWalls = [];
-  state.enemies = [];
-  state.projectiles = [];
-  state.particles = [];
-  state.beams = [];
-  state.bigWave = null;
-  state.bigWaveWarning = 0;
-  state.spawnQueue = [];
-  state.selectedTool = null;
-  state.selectedTower = null;
-  // Generous rebuild bonus since all towers are gone
-  state.coins += 150;
-  state.sand += 15;
-  document.querySelectorAll('.tower-btn').forEach(b => b.classList.remove('selected'));
-  showBanner('NEW BEACH! +150 coins');
-  updateHUD();
-}
-
 // ============================================================
 // WAVE CONTROL
 // ============================================================
@@ -1758,13 +1881,8 @@ function endWave() {
   const bonus = 20 + state.wave * 5;
   state.coins += bonus;
   floatText(350, 450, 'WAVE CLEAR! +' + bonus, '#22c55e');
-  // Every 20 waves, shuffle the map (preserves run progress)
-  if (state.wave > 0 && state.wave % 20 === 0) {
-    // Give the wave-clear text time to float before the stage swap
-    setTimeout(() => { if (!state.gameOver) shuffleStage(); }, 1500);
-  }
-  // Start auto-countdown to next wave (extra time if we're shuffling)
-  const nextDur = (state.wave % 20 === 0) ? 12 : Math.max(4, 8 - Math.floor(state.wave / 4));
+  // Single beach for the whole run — no map shuffle
+  const nextDur = Math.max(4, 8 - Math.floor(state.wave / 4));
   state.countdown = nextDur;
   state.countdownTotal = nextDur;
   document.getElementById('start-btn').classList.remove('hidden');
@@ -2095,20 +2213,23 @@ function drawTower(t) {
   else if (t.type === 'sniper') drawSniper(t);
   else if (t.type === 'radar') drawRadar(t);
   else if (t.type === 'shovel') drawShovel(t);
+  else if (t.type === 'octopus') drawOctopus(t);
 
-  // Level indicator — small chevron stars on top-right of tower
+  // Level indicator — colored stars on top-right, capped at 4 with a badge for higher levels
   if (t.level > 0) {
     ctx.save();
     const cx = 14, cy = -18;
-    // Star-burst colors deepen with level
-    const color = t.level === 1 ? '#ffcc33' : t.level === 2 ? '#ff9933' : '#ff6b47';
-    for (let i = 0; i <= t.level; i++) {
+    // Color tier deepens every 2 levels
+    const tierColors = ['#ffcc33', '#ff9933', '#ff6b47', '#a256d6', '#22c55e'];
+    const tier = Math.min(tierColors.length - 1, Math.floor(t.level / 2));
+    const color = tierColors[tier];
+    const visibleStars = Math.min(t.level + 1, 4);
+    for (let i = 0; i < visibleStars; i++) {
       ctx.fillStyle = color;
       ctx.strokeStyle = '#3a2a1a';
       ctx.lineWidth = 1.2;
       const sx = cx - i * 5;
       ctx.beginPath();
-      // tiny 4-point star
       for (let k = 0; k < 8; k++) {
         const a = k * Math.PI / 4;
         const r = k % 2 === 0 ? 3.2 : 1.4;
@@ -2119,6 +2240,16 @@ function drawTower(t) {
       }
       ctx.closePath();
       ctx.fill(); ctx.stroke();
+    }
+    if (t.level >= 4) {
+      ctx.fillStyle = '#fff';
+      ctx.strokeStyle = '#3a2a1a';
+      ctx.lineWidth = 2.2;
+      ctx.font = 'bold 10px Chewy';
+      ctx.textAlign = 'left';
+      ctx.strokeText('LV' + (t.level + 1), cx - 18, cy + 13);
+      ctx.fillText('LV' + (t.level + 1), cx - 18, cy + 13);
+      ctx.textAlign = 'start';
     }
     ctx.restore();
   }
@@ -2379,7 +2510,7 @@ function drawEnemy(e) {
   // Spawn fade in
   const alpha = Math.min(1, e.spawnT * 3);
 
-  if (e.type === 'crab') drawCrab(p.x, p.y, e.radius, '#e23e3e', 1 * alpha, e);
+  if (e.type === 'crab') drawCrab(p.x, p.y, e.radius, '#ff7849', 1 * alpha, e);
   else if (e.type === 'ghost') {
     // Ghost crabs — translucent unless revealed
     const vis = 0.15 + e.revealed * 1.4;
@@ -2397,6 +2528,8 @@ function drawEnemy(e) {
   }
   else if (e.type === 'jelly') drawJelly(p.x, p.y, e.radius, alpha, e);
   else if (e.type === 'fish') drawFish(p.x, p.y, e.radius, alpha, e, p.angle);
+  else if (e.type === 'puffer') drawPuffer(p.x, p.y, e.radius, alpha, e, p.angle);
+  else if (e.type === 'oilbarrel') drawOilBarrel(p.x, p.y, e.radius, alpha, e);
   else if (e.type === 'conch') drawConch(p.x, p.y, e.radius, alpha, e, p.angle);
   else if (e.type === 'boss') drawBoss(p.x, p.y, e.radius, alpha, e);
 
@@ -2913,6 +3046,178 @@ function drawProjectile(p) {
   ctx.restore();
 }
 
+function drawPuffer(x, y, r, alpha, e, angle) {
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.translate(x, y);
+  const flash = e.flashT > 0;
+  const wob = Math.sin(e.wobbleT * 1.5) * 0.04;
+  ctx.rotate(angle * 0.3 + wob);
+
+  // Spikes around body
+  ctx.fillStyle = flash ? '#ffffff' : '#e8a020';
+  ctx.strokeStyle = '#3a2a1a';
+  ctx.lineWidth = 1.4;
+  const spikes = 12;
+  for (let i = 0; i < spikes; i++) {
+    const a = (i / spikes) * Math.PI * 2;
+    const inner = r * 0.85;
+    const outer = r * 1.35;
+    const ax = Math.cos(a) * inner, ay = Math.sin(a) * inner;
+    const bx = Math.cos(a) * outer, by = Math.sin(a) * outer;
+    const cx = Math.cos(a + Math.PI * 2 / spikes) * inner;
+    const cy = Math.sin(a + Math.PI * 2 / spikes) * inner;
+    ctx.beginPath();
+    ctx.moveTo(ax, ay);
+    ctx.lineTo(bx, by);
+    ctx.lineTo(cx, cy);
+    ctx.closePath();
+    ctx.fill(); ctx.stroke();
+  }
+
+  // Body
+  ctx.fillStyle = flash ? '#ffffff' : '#ffd968';
+  ctx.strokeStyle = '#3a2a1a';
+  ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  ctx.arc(0, 0, r, 0, Math.PI * 2);
+  ctx.fill(); ctx.stroke();
+
+  // Belly highlight
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.35)';
+  ctx.beginPath();
+  ctx.ellipse(-r*0.25, r*0.2, r*0.4, r*0.45, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Eyes (big, surprised)
+  ctx.fillStyle = '#fff';
+  ctx.strokeStyle = '#3a2a1a';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.arc(-r*0.3, -r*0.1, r*0.22, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  ctx.beginPath(); ctx.arc(r*0.3, -r*0.1, r*0.22, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#3a2a1a';
+  ctx.beginPath(); ctx.arc(-r*0.27, -r*0.05, r*0.1, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(r*0.33, -r*0.05, r*0.1, 0, Math.PI * 2); ctx.fill();
+
+  // Tiny mouth
+  ctx.fillStyle = '#3a2a1a';
+  ctx.beginPath(); ctx.arc(0, r*0.4, r*0.13, 0, Math.PI * 2); ctx.fill();
+
+  ctx.restore();
+}
+
+function drawOilAuras() {
+  // Translucent dark slick under each oil barrel (on top of path, under towers)
+  for (const e of state.enemies) {
+    if (e.dead || !e.oilAura) continue;
+    const p = e.getPos();
+    const r = OIL_AURA_RADIUS + e.radius;
+    const swirl = state.time * 0.5;
+    const grad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, r);
+    grad.addColorStop(0, 'rgba(15, 12, 8, 0.55)');
+    grad.addColorStop(0.55, 'rgba(15, 12, 8, 0.35)');
+    grad.addColorStop(1, 'rgba(15, 12, 8, 0)');
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
+    ctx.fill();
+    // Swirling oil tendrils
+    ctx.strokeStyle = 'rgba(50, 35, 25, 0.45)';
+    ctx.lineWidth = 4;
+    ctx.lineCap = 'round';
+    for (let i = 0; i < 4; i++) {
+      const a0 = swirl + i * Math.PI / 2;
+      ctx.beginPath();
+      let first = true;
+      for (let t = 0; t <= 1.001; t += 0.08) {
+        const ar = r * 0.25 + r * 0.55 * t;
+        const aa = a0 + t * 1.6;
+        const px = p.x + Math.cos(aa) * ar;
+        const py = p.y + Math.sin(aa) * ar;
+        if (first) { ctx.moveTo(px, py); first = false; }
+        else ctx.lineTo(px, py);
+      }
+      ctx.stroke();
+    }
+    // Edge ring
+    ctx.strokeStyle = 'rgba(15, 12, 8, 0.5)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+}
+
+function drawOilBarrel(x, y, r, alpha, e) {
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.translate(x, y);
+  const flash = e.flashT > 0;
+  const tilt = Math.sin(e.wobbleT * 0.6) * 0.06;
+  ctx.rotate(tilt);
+
+  // Body
+  ctx.fillStyle = flash ? '#ffffff' : '#1f1810';
+  ctx.strokeStyle = '#000';
+  ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  ctx.roundRect(-r*0.85, -r, r*1.7, r*2, 4);
+  ctx.fill(); ctx.stroke();
+
+  // Top oval
+  ctx.fillStyle = flash ? '#ffffff' : '#332518';
+  ctx.beginPath();
+  ctx.ellipse(0, -r, r*0.85, r*0.25, 0, 0, Math.PI * 2);
+  ctx.fill(); ctx.stroke();
+
+  // Inner darker top hole
+  ctx.fillStyle = flash ? '#dddddd' : '#0a0805';
+  ctx.beginPath();
+  ctx.ellipse(0, -r, r*0.55, r*0.15, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Center band rivets
+  ctx.strokeStyle = '#0a0805';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(-r*0.85, -r*0.3); ctx.lineTo(r*0.85, -r*0.3);
+  ctx.moveTo(-r*0.85, r*0.3); ctx.lineTo(r*0.85, r*0.3);
+  ctx.stroke();
+
+  // Warning triangle
+  ctx.fillStyle = '#ffcc33';
+  ctx.strokeStyle = '#3a2a1a';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(-r*0.4, r*0.05);
+  ctx.lineTo(r*0.4, r*0.05);
+  ctx.lineTo(0, -r*0.35);
+  ctx.closePath();
+  ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#3a2a1a';
+  ctx.font = 'bold 12px Chewy';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('!', 0, -r*0.1);
+  ctx.textBaseline = 'alphabetic';
+
+  // Drips down the side
+  ctx.fillStyle = 'rgba(15, 12, 8, 0.85)';
+  ctx.strokeStyle = '#000';
+  ctx.lineWidth = 1;
+  for (let i = 0; i < 3; i++) {
+    const dripT = (state.time * 1.4 + i * 0.6) % 1.6;
+    if (dripT > 1.4) continue;
+    const dx = (i - 1) * r * 0.5;
+    const dy = r * 0.4 + dripT * (r * 0.9);
+    ctx.beginPath();
+    ctx.arc(dx, dy, 2.4, 0, Math.PI * 2);
+    ctx.fill(); ctx.stroke();
+  }
+
+  ctx.restore();
+}
+
 function drawSandWall(w) {
   const hpFrac = w.hp / w.maxHp;
   // More dramatic size range: 14 when barely alive, 32 when fresh
@@ -3089,6 +3394,7 @@ function drawHover() {
       else if (state.selectedTool === 'sniper') drawSniper(temp);
       else if (state.selectedTool === 'radar') drawRadar(temp);
       else if (state.selectedTool === 'shovel') drawShovel(temp);
+      else if (state.selectedTool === 'octopus') drawOctopus(temp);
       ctx.restore();
       ctx.globalAlpha = 1;
     }
@@ -3372,6 +3678,129 @@ function drawBeams() {
   ctx.lineCap = 'butt';
 }
 
+function drawOctopus(t) {
+  // Sand base (relative to translated origin at tower)
+  ctx.fillStyle = '#f0cd78';
+  ctx.strokeStyle = '#3a2a1a';
+  ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  ctx.ellipse(0, 14, 22, 9, 0, 0, Math.PI * 2);
+  ctx.fill(); ctx.stroke();
+
+  // Tentacles attached to grabbed enemies — drawn before the body so the suckers face up
+  if (t.octopusTargets && t.octopusTargets.length > 0) {
+    for (const e of t.octopusTargets) {
+      if (e.dead) continue;
+      const ep = e.getPos();
+      const dx = ep.x - t.x;
+      const dy = ep.y - t.y;
+      const len = Math.hypot(dx, dy);
+      if (len < 1) continue;
+      const grab = state.time * 6;
+      const segs = Math.max(8, Math.ceil(len / 12));
+      const nx = -dy / len, ny = dx / len;
+
+      // Outer tentacle stroke
+      ctx.strokeStyle = '#7c2db0';
+      ctx.lineWidth = 7;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      for (let i = 0; i <= segs; i++) {
+        const fr = i / segs;
+        const px = dx * fr;
+        const py = dy * fr;
+        const wave = Math.sin(grab + fr * 6) * 6 * Math.sin(fr * Math.PI);
+        if (i === 0) ctx.moveTo(px + nx * wave, py + ny * wave);
+        else ctx.lineTo(px + nx * wave, py + ny * wave);
+      }
+      ctx.stroke();
+
+      // Inner brighter color
+      ctx.strokeStyle = '#c879f0';
+      ctx.lineWidth = 3.5;
+      ctx.beginPath();
+      for (let i = 0; i <= segs; i++) {
+        const fr = i / segs;
+        const px = dx * fr;
+        const py = dy * fr;
+        const wave = Math.sin(grab + fr * 6) * 6 * Math.sin(fr * Math.PI);
+        if (i === 0) ctx.moveTo(px + nx * wave, py + ny * wave);
+        else ctx.lineTo(px + nx * wave, py + ny * wave);
+      }
+      ctx.stroke();
+
+      // Suckers
+      ctx.fillStyle = '#fff';
+      ctx.strokeStyle = '#7c2db0';
+      ctx.lineWidth = 1;
+      for (let s = 0.25; s < 0.95; s += 0.18) {
+        const px = dx * s;
+        const py = dy * s;
+        const wave = Math.sin(grab + s * 6) * 6 * Math.sin(s * Math.PI);
+        ctx.beginPath();
+        ctx.arc(px + nx * wave, py + ny * wave, 1.7, 0, Math.PI * 2);
+        ctx.fill(); ctx.stroke();
+      }
+    }
+  }
+
+  const bob = Math.sin(t.bob) * 1.2;
+  ctx.save();
+  ctx.translate(0, bob);
+
+  // 4 free-flapping bottom tentacles
+  ctx.strokeStyle = '#7c2db0';
+  ctx.lineWidth = 5;
+  ctx.lineCap = 'round';
+  for (let i = -2; i <= 2; i++) {
+    if (i === 0) continue;
+    ctx.beginPath();
+    ctx.moveTo(i * 5, 8);
+    ctx.bezierCurveTo(
+      i * 7, 14,
+      i * 8 + Math.sin(state.time * 4 + i) * 3, 18,
+      i * 9 + Math.sin(state.time * 4 + i) * 6, 22
+    );
+    ctx.stroke();
+  }
+
+  // Body — purple dome
+  ctx.fillStyle = '#a256d6';
+  ctx.strokeStyle = '#3a2a1a';
+  ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  ctx.arc(0, 0, 16, Math.PI, 0);
+  ctx.lineTo(14, 8);
+  ctx.bezierCurveTo(10, 12, -10, 12, -14, 8);
+  ctx.closePath();
+  ctx.fill(); ctx.stroke();
+
+  // Highlight
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+  ctx.beginPath();
+  ctx.ellipse(-5, -6, 6, 4, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Eyes
+  ctx.fillStyle = '#fff';
+  ctx.strokeStyle = '#3a2a1a';
+  ctx.lineWidth = 1.2;
+  ctx.beginPath(); ctx.arc(-5, -3, 3.5, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  ctx.beginPath(); ctx.arc(5, -3, 3.5, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#3a2a1a';
+  ctx.beginPath(); ctx.arc(-4, -2, 1.5, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(6, -2, 1.5, 0, Math.PI * 2); ctx.fill();
+
+  // Smile
+  ctx.strokeStyle = '#3a2a1a';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.arc(0, 3, 3, 0.2, Math.PI - 0.2);
+  ctx.stroke();
+
+  ctx.restore();
+}
+
 function drawSniper(t) {
   // Base sandbag
   ctx.fillStyle = '#f0cd78';
@@ -3605,6 +4034,7 @@ function loop(now) {
   drawBuildSpots();
 
   for (const w of state.sandWalls) drawSandWall(w);
+  drawOilAuras();
   drawAllRanges();
   for (const t of state.towers) drawTower(t);
   for (const e of state.enemies) drawEnemy(e);
