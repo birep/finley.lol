@@ -1,0 +1,870 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Volcano Escape</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Lilita+One&family=Nunito:wght@600;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#fbf6e9; --ink:#3c2c1c; --line:#5b4632;
+    --lava:#e8541e; --lava-d:#b8330c;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;padding:0;height:100%}
+  body{
+    font-family:'Nunito',sans-serif;color:var(--ink);overflow:hidden;
+    background:linear-gradient(180deg,#7fc7ec 0%,#9bd0e6 40%,#6fae8a 100%);
+  }
+  #app{position:fixed;inset:0;display:flex;flex-direction:column}
+  /* status bar */
+  .statusbar{
+    display:flex;align-items:center;justify-content:space-between;gap:8px;
+    background:var(--paper);border-bottom:3px solid var(--line);
+    padding:7px 12px;box-shadow:0 3px 10px rgba(0,0,0,.25);z-index:5;flex:0 0 auto;
+  }
+  .brand{font-family:'Lilita One',cursive;font-size:clamp(16px,4.5vw,24px);color:var(--lava-d);
+    text-shadow:0 1px 0 #fff;letter-spacing:.5px}
+  .turn{display:flex;align-items:center;gap:7px;font-weight:800;font-size:clamp(13px,3.6vw,16px)}
+  .turn .dot{width:14px;height:14px;border-radius:50%;background:var(--lava)}
+  .volc{display:flex;align-items:center;gap:6px;font-weight:800;font-size:12px}
+  .vmeter{display:flex;gap:3px}
+  .vseg{width:13px;height:19px;border:2px solid var(--line);border-radius:3px 3px 5px 5px;background:#d9cba6}
+  .vseg.on{background:linear-gradient(180deg,#ffd23e,var(--lava));animation:wob .45s}
+  @keyframes wob{from{transform:scale(.4) translateY(-5px)}to{transform:none}}
+
+  #scene{flex:1 1 auto;position:relative;min-height:0}
+  #scene canvas{display:block;width:100%;height:100%;touch-action:none}
+
+  /* bottom control bar */
+  .controls{
+    flex:0 0 auto;background:var(--paper);border-top:3px solid var(--line);
+    padding:9px 12px calc(9px + env(safe-area-inset-bottom));box-shadow:0 -3px 10px rgba(0,0,0,.25);z-index:5;
+  }
+  .msg{text-align:center;font-weight:800;min-height:22px;font-size:clamp(13px,3.7vw,17px);margin-bottom:7px}
+  .row{display:flex;gap:12px;justify-content:center;align-items:center}
+  .die{width:58px;height:58px;border-radius:13px;background:#fff;border:3px solid var(--line);
+    display:grid;place-items:center;font-size:30px;font-family:'Lilita One',cursive;
+    box-shadow:inset 0 -4px 0 rgba(0,0,0,.08),0 3px 0 rgba(0,0,0,.18)}
+  .die.spin{animation:roll .12s linear infinite}
+  @keyframes roll{from{transform:rotate(-8deg) scale(1)}50%{transform:rotate(8deg) scale(1.06)}to{transform:rotate(-8deg)}}
+  button{
+    font-family:'Lilita One',cursive;cursor:pointer;border:3px solid var(--line);border-radius:14px;
+    padding:13px 22px;font-size:18px;color:#fff;letter-spacing:.5px;
+    background:linear-gradient(180deg,#ffb43d,#f5871f);box-shadow:0 5px 0 var(--lava-d),0 8px 12px rgba(0,0,0,.25);
+    transition:transform .06s,box-shadow .06s}
+  button:active{transform:translateY(4px);box-shadow:0 1px 0 var(--lava-d)}
+  button:disabled{opacity:.45;cursor:not-allowed}
+  button.ghost{background:linear-gradient(180deg,#c9b49a,#a98f6c);box-shadow:0 5px 0 #6f583c;font-size:14px;padding:11px 16px}
+
+  /* hint pill (rescue tracker) */
+  .tracker{position:absolute;left:10px;top:10px;background:rgba(251,246,233,.92);border:3px solid var(--line);
+    border-radius:14px;padding:7px 9px;box-shadow:0 4px 12px rgba(0,0,0,.3);font-weight:800;font-size:12px;z-index:4}
+  .tracker .ttl{display:flex;align-items:center;gap:5px;margin-bottom:4px}
+  .tracker .d{display:flex;align-items:center;gap:6px;margin:2px 0}
+  .tracker .d .sw{width:14px;height:14px;border-radius:4px;border:1.5px solid var(--line)}
+  .tracker .d.safe{opacity:.95;color:#2e7d32}
+  .tracker .d.safe::after{content:" 🏝️"}
+  .tracker .d.away{opacity:.7}
+
+  /* modals */
+  .modal{position:fixed;inset:0;background:rgba(30,18,8,.72);display:grid;place-items:center;z-index:50;padding:16px}
+  .card{width:100%;max-width:460px;max-height:92vh;overflow:auto;background:var(--paper);border:4px solid var(--line);
+    border-radius:22px;padding:20px;box-shadow:0 16px 40px rgba(0,0,0,.5);text-align:center}
+  .card h2{font-family:'Lilita One',cursive;margin:.1em 0 .15em;font-size:28px}
+  .card p{font-weight:700;margin:.3em 0;line-height:1.4;font-size:14px}
+  .big{font-size:58px;line-height:1;margin:4px}
+  .pcount{display:flex;gap:8px;justify-content:center;margin:12px 0}
+  .pcount button{font-size:22px;width:54px;padding:12px 0;background:linear-gradient(180deg,#9ad77f,#5f9e4f);box-shadow:0 5px 0 #3d6e30}
+  .pcount button.sel{background:linear-gradient(180deg,#ffd23e,#f5871f);box-shadow:0 5px 0 var(--lava-d);transform:translateY(2px)}
+  .names{display:flex;flex-direction:column;gap:8px;margin:12px 0}
+  .names input{font-family:'Nunito';font-weight:800;font-size:16px;padding:10px 12px;border:3px solid var(--line);
+    border-radius:12px;background:#fff7e3;color:var(--ink)}
+  .rules{text-align:left;font-size:13px;font-weight:600;background:#fff7e3;border:2px dashed var(--line);
+    border-radius:14px;padding:10px 12px;margin:10px 0}
+  .rules b{color:var(--lava-d)}
+  .hide{display:none!important}
+  .loading{position:fixed;inset:0;display:grid;place-items:center;background:#7fc7ec;z-index:60;
+    font-family:'Lilita One',cursive;font-size:22px;color:#fff;text-shadow:0 2px 0 var(--lava-d)}
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="statusbar">
+    <div class="brand">🌋 Volcano Escape</div>
+    <div class="turn"><span class="dot" id="turnDot"></span><span id="turnName">—</span></div>
+    <div class="volc">Volcano<div class="vmeter" id="vmeter"></div></div>
+  </div>
+
+  <div id="scene">
+    <div class="tracker" id="tracker"></div>
+  </div>
+
+  <div class="controls">
+    <div class="msg" id="msg">Loading the island…</div>
+    <div class="row" id="ctlRow">
+      <div class="die" id="die">🎲</div>
+      <button id="rollBtn" disabled>Roll</button>
+    </div>
+  </div>
+</div>
+
+<div class="loading" id="loading">Painting the island… 🦕</div>
+
+<!-- Setup -->
+<div class="modal hide" id="setup">
+  <div class="card">
+    <div class="big">🦕 🦖 🦴</div>
+    <h2>Volcano Escape</h2>
+    <p>Work together to get <b>all three dinosaurs</b> to the Safe Island before the volcano erupts!</p>
+    <p style="margin-top:10px">How many players?</p>
+    <div class="pcount" id="pcount">
+      <button data-n="1">1</button><button data-n="2" class="sel">2</button>
+      <button data-n="3">3</button><button data-n="4">4</button>
+    </div>
+    <div class="names" id="names"></div>
+    <div class="rules">
+      <p><b>Your turn:</b> Roll the die. A number lets you move <i>any one</i> dinosaur that many spaces. Tap a dino, then tap one of the two glowing squares.</p>
+      <p><b>The 🌋 face:</b> no move, but the volcano grows. After <b>5</b> volcano rolls it erupts and everyone loses.</p>
+      <p><b>Peek a chip:</b> When a dino stops on a green, rocky, or mountain land, flip one fern chip there. It shows for a moment — remember it!</p>
+      <p><b>Rescue:</b> Get a dino to its <i>own</i> picture chip and flip it to send that dino to the Safe Island. 🦖 the T‑Rex sends the dino back to its start. Fossils &amp; bugs do nothing.</p>
+    </div>
+    <button id="startBtn">Start Adventure!</button>
+  </div>
+</div>
+
+<!-- Game over -->
+<div class="modal hide" id="over">
+  <div class="card">
+    <div class="big" id="overEmoji">🎉</div>
+    <h2 id="overTitle"></h2>
+    <p id="overText"></p>
+    <button id="againBtn">Play Again</button>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+"use strict";
+/* ============================== DATA ============================== */
+const TILES=30, ARCS=6, PER_ARC=5, STEP=Math.PI*2/TILES;
+const ARC_REGION=["desert","forest","desert","mountain","desert","rock"];
+const LIVE=["forest","mountain","rock"];
+const LAND_NAME={forest:"the Fern Forest",mountain:"the Misty Mountains",rock:"the Red Rocks"};
+const REGION_COLOR={desert:0xe7d5a3,forest:0x6fae54,mountain:0x6fa6db,rock:0xd98a4e};
+const WEDGE_COLOR={desert:0xe2d2a0,forest:0x7cb85f,mountain:0x86b6e0,rock:0xcf8a52};
+const RING_R=9.2, INNER_R=10.0;
+
+const DINOS=[
+  {key:"stego",  name:"Stegosaurus", color:"#5f9e4f", hex:0x5f9e4f, start:2},
+  {key:"trike",  name:"Triceratops", color:"#d56a86", hex:0xd56a86, start:12},
+  {key:"bronto", name:"Brontosaurus",color:"#9c6b3f", hex:0x9c6b3f, start:22},
+];
+const ITEMS=[
+  {key:"feather",name:"Feather",emoji:"🪶"},
+  {key:"eggs",name:"Eggs",emoji:"🥚"},
+  {key:"wood",name:"Wood",emoji:"🪵"},
+  {key:"newt",name:"Salamander",emoji:"🦎"},
+  {key:"ammonite",name:"Ammonite",emoji:"🐚"},
+  {key:"dragonfly",name:"Dragonfly",emoji:"🪰"},
+  {key:"footprint",name:"Footprint",emoji:"🐾"},
+  {key:"claw",name:"Claw",emoji:"🦴"},
+];
+
+/* ============================== TEXTURES ============================== */
+function mkCanvas(s){const c=document.createElement("canvas");c.width=c.height=s;return c;}
+function tex(c){const t=new THREE.CanvasTexture(c);t.anisotropy=4;t.needsUpdate=true;return t;}
+const _texCache={};
+
+function outline(ctx,fill,stroke,w){ctx.fillStyle=fill;ctx.strokeStyle=stroke;ctx.lineWidth=w;ctx.fill();ctx.stroke();}
+function ell(ctx,x,y,rx,ry){ctx.beginPath();ctx.ellipse(x,y,rx,ry,0,0,Math.PI*2);}
+
+function drawStego(ctx,fill){
+  const D="#2e3d24";
+  // legs
+  ctx.fillStyle=fill;ctx.strokeStyle=D;ctx.lineWidth=4;
+  [[100,135],[150,135],[88,133],[162,133]].forEach(([x,y])=>{ctx.fillRect(x,y,13,30);ctx.strokeRect(x,y,13,30);});
+  // tail
+  ctx.beginPath();ctx.moveTo(185,120);ctx.lineTo(238,116);ctx.lineTo(185,138);ctx.closePath();outline(ctx,fill,D,4);
+  // body
+  ell(ctx,128,122,62,32);outline(ctx,fill,D,4);
+  // head/neck
+  ell(ctx,66,118,20,15);outline(ctx,fill,D,4);
+  // plates
+  ctx.fillStyle="#3f6b32";ctx.strokeStyle=D;ctx.lineWidth=3;
+  [92,116,140,164].forEach((x,i)=>{const h=i===1||i===2?34:26;ctx.beginPath();ctx.moveTo(x-13,96);ctx.quadraticCurveTo(x,96-h,x+13,96);ctx.closePath();ctx.fill();ctx.stroke();});
+  // eye
+  ctx.fillStyle=D;ctx.beginPath();ctx.arc(58,114,3,0,7);ctx.fill();
+}
+function drawTrike(ctx,fill){
+  const D="#5a2a36";
+  ctx.fillStyle=fill;ctx.strokeStyle=D;ctx.lineWidth=4;
+  [[110,138],[158,138],[98,136],[170,136]].forEach(([x,y])=>{ctx.fillRect(x,y,13,30);ctx.strokeRect(x,y,13,30);});
+  // tail
+  ctx.beginPath();ctx.moveTo(190,124);ctx.lineTo(225,122);ctx.lineTo(190,140);ctx.closePath();outline(ctx,fill,D,4);
+  // body
+  ell(ctx,140,124,56,33);outline(ctx,fill,D,4);
+  // frill
+  ell(ctx,78,112,30,32);outline(ctx,"#c25a76",D,4);
+  // head
+  ell(ctx,52,122,22,16);outline(ctx,fill,D,4);
+  // horns
+  ctx.fillStyle="#f2e3c6";ctx.strokeStyle=D;
+  ctx.beginPath();ctx.moveTo(58,104);ctx.lineTo(40,78);ctx.lineTo(70,100);ctx.closePath();ctx.fill();ctx.stroke();
+  ctx.beginPath();ctx.moveTo(70,104);ctx.lineTo(58,80);ctx.lineTo(82,102);ctx.closePath();ctx.fill();ctx.stroke();
+  ctx.beginPath();ctx.moveTo(34,124);ctx.lineTo(20,118);ctx.lineTo(36,132);ctx.closePath();ctx.fill();ctx.stroke();
+  ctx.fillStyle=D;ctx.beginPath();ctx.arc(60,120,3,0,7);ctx.fill();
+}
+function drawBronto(ctx,fill){
+  const D="#4a3320";
+  ctx.fillStyle=fill;ctx.strokeStyle=D;ctx.lineWidth=4;
+  [[112,140],[160,140],[100,138],[172,138]].forEach(([x,y])=>{ctx.fillRect(x,y,13,30);ctx.strokeRect(x,y,13,30);});
+  // tail
+  ctx.beginPath();ctx.moveTo(190,128);ctx.quadraticCurveTo(235,120,244,96);ctx.quadraticCurveTo(232,118,188,140);ctx.closePath();outline(ctx,fill,D,4);
+  // body
+  ell(ctx,138,128,58,30);outline(ctx,fill,D,4);
+  // neck
+  ctx.beginPath();ctx.moveTo(96,128);ctx.quadraticCurveTo(60,108,52,58);ctx.quadraticCurveTo(72,96,116,124);ctx.closePath();outline(ctx,fill,D,4);
+  // head
+  ell(ctx,48,52,18,12);outline(ctx,fill,D,4);
+  ctx.fillStyle=D;ctx.beginPath();ctx.arc(42,50,3,0,7);ctx.fill();
+}
+function drawTrexHead(ctx,fill){
+  const D="#6e2e1c";
+  ctx.beginPath();
+  ctx.moveTo(40,150);ctx.quadraticCurveTo(30,80,90,60);ctx.quadraticCurveTo(150,48,150,90);
+  ctx.lineTo(210,96);ctx.lineTo(150,120);ctx.quadraticCurveTo(150,170,90,178);
+  ctx.quadraticCurveTo(45,180,40,150);ctx.closePath();outline(ctx,fill,D,5);
+  // teeth
+  ctx.fillStyle="#fff7e3";ctx.strokeStyle=D;ctx.lineWidth=2;
+  for(let i=0;i<5;i++){const x=150-i*13;ctx.beginPath();ctx.moveTo(x,110);ctx.lineTo(x-6,124);ctx.lineTo(x+6,124);ctx.closePath();ctx.fill();ctx.stroke();}
+  // eye
+  ctx.fillStyle="#ffd23e";ctx.beginPath();ctx.arc(96,92,9,0,7);ctx.fill();
+  ctx.fillStyle=D;ctx.beginPath();ctx.arc(99,92,4,0,7);ctx.fill();
+}
+
+function caption(ctx,txt,y){
+  ctx.font="bold 26px Nunito, sans-serif";ctx.textAlign="center";ctx.textBaseline="alphabetic";
+  ctx.lineWidth=5;ctx.strokeStyle="rgba(255,247,227,.95)";ctx.strokeText(txt,128,y);
+  ctx.fillStyle="#3c2c1c";ctx.fillText(txt,128,y);
+}
+
+// face texture for a chip key like 'dino:stego','trex','item:feather'
+function faceTex(key){
+  if(_texCache[key]) return _texCache[key];
+  const c=mkCanvas(256),ctx=c.getContext("2d");
+  // cream disc
+  ctx.fillStyle="#f1e4bf";ctx.beginPath();ctx.arc(128,128,124,0,7);ctx.fill();
+  ctx.strokeStyle="#cdb88a";ctx.lineWidth=6;ctx.beginPath();ctx.arc(128,128,118,0,7);ctx.stroke();
+  ctx.save();ctx.translate(0,-14);
+  if(key.startsWith("dino:")){
+    const k=key.slice(5);
+    if(k==="stego") drawStego(ctx,DINOS[0].color);
+    if(k==="trike") drawTrike(ctx,DINOS[1].color);
+    if(k==="bronto") drawBronto(ctx,DINOS[2].color);
+    ctx.restore();
+    caption(ctx,DINOS.find(d=>d.key===k).name,232);
+  } else if(key==="trex"){
+    ctx.translate(0,-6);drawTrexHead(ctx,"#d4622e");ctx.restore();
+    caption(ctx,"T‑REX!",234);
+  } else {
+    const it=ITEMS.find(i=>"item:"+i.key===key);
+    ctx.restore();
+    ctx.font="92px serif";ctx.textAlign="center";ctx.textBaseline="middle";
+    ctx.fillText(it.emoji,128,110);
+    caption(ctx,it.name,232);
+  }
+  _texCache[key]=tex(c);return _texCache[key];
+}
+function fernTex(){
+  if(_texCache.fern) return _texCache.fern;
+  const c=mkCanvas(256),ctx=c.getContext("2d");
+  ctx.fillStyle="#ead9ad";ctx.beginPath();ctx.arc(128,128,124,0,7);ctx.fill();
+  ctx.strokeStyle="#cdb88a";ctx.lineWidth=6;ctx.beginPath();ctx.arc(128,128,118,0,7);ctx.stroke();
+  ctx.strokeStyle="#4f8a3c";ctx.fillStyle="#5f9e4f";ctx.lineWidth=4;
+  for(let s=0;s<3;s++){
+    const ang=(-90+(s-1)*42)*Math.PI/180,len=92;
+    const bx=128,by=200;
+    ctx.beginPath();ctx.moveTo(bx,by);
+    ctx.lineTo(bx+Math.cos(ang)*len,by+Math.sin(ang)*len);ctx.stroke();
+    for(let k=1;k<=6;k++){
+      const t=k/7,px=bx+Math.cos(ang)*len*t,py=by+Math.sin(ang)*len*t,ls=10-k;
+      ctx.beginPath();ell(ctx,px+Math.cos(ang+1.4)*8,py+Math.sin(ang+1.4)*8,ls,4);ctx.fill();
+      ctx.beginPath();ell(ctx,px+Math.cos(ang-1.4)*8,py+Math.sin(ang-1.4)*8,ls,4);ctx.fill();
+    }
+  }
+  _texCache.fern=tex(c);return _texCache.fern;
+}
+// upright dino sprite (transparent) with name
+function dinoSpriteTex(d){
+  const key="sprite:"+d.key;if(_texCache[key])return _texCache[key];
+  const c=mkCanvas(256),ctx=c.getContext("2d");
+  ctx.save();ctx.translate(0,18);
+  if(d.key==="stego") drawStego(ctx,d.color);
+  if(d.key==="trike") drawTrike(ctx,d.color);
+  if(d.key==="bronto") drawBronto(ctx,d.color);
+  ctx.restore();
+  caption(ctx,d.name,250);
+  _texCache[key]=tex(c);return _texCache[key];
+}
+
+/* ============================== THREE SETUP ============================== */
+let renderer,scene,camera,board,raycaster,clock;
+let theta=0.0,phi=0.92,camR=24;
+const target=new THREE.Vector3(0,0.6,0);
+const G={players:[],current:0,volcano:0,roll:0,phase:"idle",busy:true,
+  dinos:[],tiles:[],chips:[],selected:null,reachable:[],flipRegion:null,flipDino:null};
+
+function tilePos(i){const a=i*STEP;return new THREE.Vector3(Math.cos(a)*RING_R,0,Math.sin(a)*RING_R);}
+function regionOfTile(i){return ARC_REGION[Math.floor(i/PER_ARC)];}
+
+function annularSector(rIn,rOut,a0,a1){
+  const s=new THREE.Shape();
+  s.moveTo(Math.cos(a0)*rIn,Math.sin(a0)*rIn);
+  s.lineTo(Math.cos(a0)*rOut,Math.sin(a0)*rOut);
+  s.absarc(0,0,rOut,a0,a1,false);
+  s.lineTo(Math.cos(a1)*rIn,Math.sin(a1)*rIn);
+  s.absarc(0,0,rIn,a1,a0,true);
+  return s;
+}
+
+function initThree(){
+  const host=document.getElementById("scene");
+  renderer=new THREE.WebGLRenderer({antialias:true});
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2));
+  renderer.setSize(host.clientWidth,host.clientHeight);
+  renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+  renderer.toneMapping=THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure=0.92;
+  host.appendChild(renderer.domElement);
+
+  scene=new THREE.Scene();
+  scene.background=new THREE.Color(0x5aa6cf);
+  scene.fog=new THREE.Fog(0x5aa6cf,42,82);
+
+  camera=new THREE.PerspectiveCamera(45,host.clientWidth/host.clientHeight,0.1,200);
+  updateCamera();
+
+  scene.add(new THREE.AmbientLight(0xffffff,0.30));
+  const sun=new THREE.DirectionalLight(0xfff0d0,1.05);
+  sun.position.set(16,28,12);sun.castShadow=true;
+  sun.shadow.mapSize.set(2048,2048);sun.shadow.bias=-0.0004;
+  const d=22;sun.shadow.camera.left=-d;sun.shadow.camera.right=d;sun.shadow.camera.top=d;sun.shadow.camera.bottom=-d;
+  sun.shadow.camera.near=1;sun.shadow.camera.far=80;
+  scene.add(sun);
+  scene.add(new THREE.HemisphereLight(0x9ecbe6,0x5a7a3a,0.28));
+
+  // big "held to the camera" reveal card (child of camera so it floats in view)
+  scene.add(camera);
+  presentPlane=new THREE.Mesh(new THREE.PlaneGeometry(1,1),
+    new THREE.MeshBasicMaterial({transparent:true,depthTest:false,side:THREE.DoubleSide}));
+  presentPlane.position.set(0,-0.35,-5);presentPlane.renderOrder=999;presentPlane.visible=false;
+  camera.add(presentPlane);
+
+  // sea
+  const sea=new THREE.Mesh(new THREE.PlaneGeometry(400,400),
+    new THREE.MeshStandardMaterial({color:0x2f9fd0,roughness:.6,metalness:.1}));
+  sea.rotation.x=-Math.PI/2;sea.position.y=-0.05;sea.receiveShadow=true;scene.add(sea);
+
+  board=new THREE.Group();scene.add(board);
+  buildIsland();
+  buildSafeIsland();
+
+  raycaster=new THREE.Raycaster();
+  clock=new THREE.Clock();
+  bindPointer();
+  window.addEventListener("resize",onResize);
+}
+function updateCamera(){
+  camera.position.set(
+    target.x+camR*Math.sin(phi)*Math.sin(theta),
+    target.y+camR*Math.cos(phi),
+    target.z+camR*Math.sin(phi)*Math.cos(theta));
+  camera.lookAt(target);
+}
+function onResize(){
+  const host=document.getElementById("scene");
+  renderer.setSize(host.clientWidth,host.clientHeight);
+  camera.aspect=host.clientWidth/host.clientHeight;camera.updateProjectionMatrix();
+}
+
+let volcLava,volcGroup,volcGlow,presentPlane;
+const tileMarkers=[];
+
+function glowTex(){
+  if(_texCache.glow)return _texCache.glow;
+  const c=mkCanvas(128),ctx=c.getContext("2d");
+  const g=ctx.createRadialGradient(64,64,2,64,64,62);
+  g.addColorStop(0,"rgba(255,255,255,1)");g.addColorStop(0.3,"rgba(255,180,80,0.85)");
+  g.addColorStop(1,"rgba(255,90,30,0)");
+  ctx.fillStyle=g;ctx.fillRect(0,0,128,128);
+  _texCache.glow=tex(c);return _texCache.glow;
+}
+async function setVolcanoSize(v,animate){
+  if(!volcGroup)return;
+  const sxz=0.60+v*0.13, sy=0.40+v*0.42;          // tiny lump at 0, tall & scary by 5
+  const lava=v===0?0:(0.6+v/5*2.2);
+  const glowOp=v===0?0:Math.min(0.85,0.12+v*0.16);
+  const fromX=volcGroup.scale.x, fromY=volcGroup.scale.y;
+  const fromL=volcLava.material.emissiveIntensity, fromG=volcGlow.material.opacity;
+  if(animate){
+    await anim(650,t=>{
+      const sh=(v>0?Math.sin(t*Math.PI*6)*(1-t)*0.06:0); // eruption shudder
+      volcGroup.scale.set(lerp(fromX,sxz,t)+sh, lerp(fromY,sy,t), lerp(fromX,sxz,t)-sh);
+      volcLava.material.emissiveIntensity=lerp(fromL,lava,t);
+      volcGlow.material.opacity=lerp(fromG,glowOp,t);
+    });
+  }
+  volcGroup.scale.set(sxz,sy,sxz);
+  volcLava.material.emissiveIntensity=lava;
+  volcGlow.material.opacity=glowOp;
+}
+
+function buildIsland(){
+  // base landmass
+  const base=new THREE.Mesh(new THREE.CylinderGeometry(INNER_R+0.6,INNER_R+1.4,1.2,64),
+    new THREE.MeshStandardMaterial({color:0xd8c79a,roughness:1}));
+  base.position.y=-0.2;base.receiveShadow=true;board.add(base);
+
+  // wedges
+  for(let a=0;a<ARCS;a++){
+    const reg=ARC_REGION[a];
+    const a0=(a*PER_ARC-0.5)*STEP, a1=(a*PER_ARC+PER_ARC-0.5)*STEP;
+    const geo=new THREE.ShapeGeometry(annularSector(1.7,INNER_R,a0,a1),28);
+    const m=new THREE.Mesh(geo,new THREE.MeshStandardMaterial({color:WEDGE_COLOR[reg],roughness:1,side:THREE.DoubleSide}));
+    m.rotation.x=Math.PI/2;m.position.y=0.45;m.receiveShadow=true;board.add(m);
+    addDecor(reg,a);
+  }
+
+  // ring tiles
+  for(let i=0;i<TILES;i++){
+    const reg=regionOfTile(i),p=tilePos(i),a=i*STEP;
+    const mesh=new THREE.Mesh(new THREE.BoxGeometry(1.25,0.28,1.25),
+      new THREE.MeshStandardMaterial({color:REGION_COLOR[reg],roughness:.9,emissive:0xffd23e,emissiveIntensity:0}));
+    mesh.position.set(p.x,0.56,p.z);mesh.rotation.y=-a;
+    mesh.castShadow=true;mesh.receiveShadow=true;
+    mesh.userData={kind:"tile",i};board.add(mesh);
+    G.tiles.push({i,region:reg,mesh,pos:p,baseY:0.56});
+    // home marker on desert starts
+  }
+
+  // volcano (built at local origin so its base stays planted while it grows)
+  volcGroup=new THREE.Group();volcGroup.position.y=0.40;
+  const H=3.4;
+  const cone=new THREE.Mesh(new THREE.CylinderGeometry(1.0,2.7,H,40),
+    new THREE.MeshStandardMaterial({color:0x5a3a26,roughness:1}));
+  cone.position.y=H/2;cone.castShadow=true;volcGroup.add(cone);
+  const crater=new THREE.Mesh(new THREE.CylinderGeometry(1.05,1.15,0.45,32),
+    new THREE.MeshStandardMaterial({color:0x2e1d13}));
+  crater.position.y=H;volcGroup.add(crater);
+  volcLava=new THREE.Mesh(new THREE.CylinderGeometry(0.9,0.9,0.34,28),
+    new THREE.MeshStandardMaterial({color:0x7a3b1c,emissive:0xff5a1e,emissiveIntensity:0}));
+  volcLava.position.y=H+0.08;volcGroup.add(volcLava);
+  // glow halo above crater that intensifies with eruptions
+  volcGlow=new THREE.Sprite(new THREE.SpriteMaterial({map:glowTex(),color:0xff7a2e,transparent:true,
+    blending:THREE.AdditiveBlending,depthWrite:false,opacity:0}));
+  volcGlow.position.y=H+0.5;volcGlow.scale.set(4,4,1);volcGroup.add(volcGlow);
+  board.add(volcGroup);
+  setVolcanoSize(0,false);
+
+  // reachable-tile markers (bright, lighting-independent, bobbing arrows)
+  for(let k=0;k<2;k++){
+    const mg=new THREE.Group();mg.visible=false;
+    const ringMat=new THREE.MeshBasicMaterial({color:0x39ff9d,transparent:true,opacity:0.9});
+    const ring=new THREE.Mesh(new THREE.TorusGeometry(0.78,0.10,10,28),ringMat);
+    ring.rotation.x=Math.PI/2;ring.position.y=0.74;mg.add(ring);
+    const arrow=new THREE.Mesh(new THREE.ConeGeometry(0.34,0.6,16),
+      new THREE.MeshBasicMaterial({color:0x39ff9d}));
+    arrow.rotation.x=Math.PI;arrow.position.y=1.7;mg.add(arrow);
+    board.add(mg);tileMarkers.push(mg);
+  }
+
+  buildChips();
+  buildDinos();
+}
+
+function addDecor(reg,a){
+  const mid=(a*PER_ARC+PER_ARC/2-0.5)*STEP;
+  function at(r,off,fn){const ang=mid+off;fn(Math.cos(ang)*r,Math.sin(ang)*r);}
+  if(reg==="forest"){
+    [[8.4,-0.45],[8.6,0.0],[8.3,0.45]].forEach(([r,o])=>at(r,o,(x,z)=>{
+      const t=new THREE.Mesh(new THREE.ConeGeometry(0.7,1.8,8),new THREE.MeshStandardMaterial({color:0x3f7a35,roughness:1}));
+      t.position.set(x,1.3,z);t.castShadow=true;board.add(t);}));
+  }else if(reg==="mountain"){
+    [[8.5,-0.4],[8.4,0.35]].forEach(([r,o])=>at(r,o,(x,z)=>{
+      const m=new THREE.Mesh(new THREE.ConeGeometry(1.2,2.4,6),new THREE.MeshStandardMaterial({color:0x7d93ad,roughness:1}));
+      m.position.set(x,1.6,z);m.castShadow=true;board.add(m);
+      const cap=new THREE.Mesh(new THREE.ConeGeometry(0.55,0.7,6),new THREE.MeshStandardMaterial({color:0xfdfdfd}));
+      cap.position.set(x,2.55,z);board.add(cap);}));
+  }else if(reg==="rock"){
+    [[8.5,-0.4],[8.3,0.0],[8.5,0.4]].forEach(([r,o],i)=>at(r,o,(x,z)=>{
+      const h=0.9+i*0.3;const b=new THREE.Mesh(new THREE.BoxGeometry(1.1,h,1.1),new THREE.MeshStandardMaterial({color:0xb96a30,roughness:1}));
+      b.position.set(x,0.4+h/2,z);b.rotation.y=Math.random();b.castShadow=true;board.add(b);}));
+  }
+}
+
+function buildChips(){
+  const fern=fernTex();
+  LIVE.forEach(reg=>{
+    const arc=ARC_REGION.indexOf(reg);
+    const c=(arc*PER_ARC+PER_ARC/2-0.5)*STEP;
+    const slots=[[5.0,-0.55],[6.6,-0.28],[5.0,0.28],[6.6,0.55]];
+    slots.forEach((sl,k)=>{
+      const ang=c+sl[1],r=sl[0],x=Math.cos(ang)*r,z=Math.sin(ang)*r;
+      const mats=[
+        new THREE.MeshStandardMaterial({color:0xe2d2a0,roughness:1}),       // side
+        new THREE.MeshStandardMaterial({map:fern,roughness:.85,emissive:0x3ad17a,emissiveIntensity:0}), // top = back
+        new THREE.MeshStandardMaterial({map:fern,roughness:.85})            // bottom = face (set later)
+      ];
+      const mesh=new THREE.Mesh(new THREE.CylinderGeometry(0.62,0.62,0.14,40),mats);
+      mesh.position.set(x,0.56,z);mesh.castShadow=true;mesh.receiveShadow=true;
+      mesh.userData={kind:"chip",region:reg};board.add(mesh);
+      G.chips.push({region:reg,mesh,baseY:0.56,faceUp:false,removed:false,type:null,dino:null});
+    });
+  });
+}
+
+function buildDinos(){
+  DINOS.forEach((d,idx)=>{
+    const g=new THREE.Group();
+    const base=new THREE.Mesh(new THREE.CylinderGeometry(0.72,0.82,0.34,28),
+      new THREE.MeshStandardMaterial({color:d.hex,roughness:.7,emissive:0xffcc33,emissiveIntensity:0}));
+    base.position.y=0.87;base.castShadow=true;base.userData={kind:"dino",idx};
+    g.add(base);
+    // shadow disc
+    const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:dinoSpriteTex(d),transparent:true,depthWrite:false}));
+    sp.center.set(0.5,0.0);sp.scale.set(2.6,2.6,1);sp.position.y=1.04;sp.userData={kind:"dino",idx};
+    g.add(sp);
+    board.add(g);
+    G.dinos.push({...d,idx,group:g,base,sprite:sp,tile:d.start,escaped:false});
+  });
+}
+
+let safeSlots=[];
+function buildSafeIsland(){
+  const g=new THREE.Group();g.position.set(-13.5,0,-7);
+  const isl=new THREE.Mesh(new THREE.CylinderGeometry(4.2,4.8,1.0,40),
+    new THREE.MeshStandardMaterial({color:0xdcc79a,roughness:1}));
+  isl.position.y=-0.1;isl.receiveShadow=true;g.add(isl);
+  const grass=new THREE.Mesh(new THREE.CylinderGeometry(3.4,3.4,0.2,40),
+    new THREE.MeshStandardMaterial({color:0x7cbf5a,roughness:1}));
+  grass.position.y=0.42;g.add(grass);
+  // palm
+  const trunk=new THREE.Mesh(new THREE.CylinderGeometry(0.18,0.26,2.0,10),new THREE.MeshStandardMaterial({color:0x8a5a32}));
+  trunk.position.set(2.0,1.4,1.4);trunk.castShadow=true;g.add(trunk);
+  const leaves=new THREE.Mesh(new THREE.ConeGeometry(1.3,1.0,7),new THREE.MeshStandardMaterial({color:0x3f7a35}));
+  leaves.position.set(2.0,2.6,1.4);g.add(leaves);
+  scene.add(g);
+  safeSlots=[new THREE.Vector3(-14.6,0.6,-7),new THREE.Vector3(-13.5,0.6,-8.0),new THREE.Vector3(-12.4,0.6,-7)];
+}
+
+/* ============================== TWEENS ============================== */
+function ease(t){return t<.5?2*t*t:1-Math.pow(-2*t+2,2)/2;}
+function anim(dur,fn){return new Promise(res=>{const t0=performance.now();
+  (function step(){const t=Math.min(1,(performance.now()-t0)/dur);fn(ease(t));if(t<1)requestAnimationFrame(step);else res();})();});}
+function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
+function lerp(a,b,t){return a+(b-a)*t;}
+
+const PRES=3.4; // presented card size
+async function presentReveal(faceKey){
+  presentPlane.material.map=fernTex();presentPlane.material.opacity=1;presentPlane.material.needsUpdate=true;
+  presentPlane.visible=true;presentPlane.scale.set(0,0,1);
+  // lift up to the camera, fern-side showing
+  await anim(380,t=>{presentPlane.scale.set(PRES*t,PRES*t,1);presentPlane.position.y=lerp(-1.4,-0.35,t);});
+  // card-flip: squash to an edge, swap to the picture, open back up
+  await anim(200,t=>{presentPlane.scale.x=PRES*(1-t);});
+  presentPlane.material.map=faceTex(faceKey);presentPlane.material.needsUpdate=true;
+  await anim(240,t=>{presentPlane.scale.x=PRES*t;});
+}
+async function dismissReveal(){
+  await anim(300,t=>{const s=PRES*(1-t);presentPlane.scale.set(s,s,1);presentPlane.material.opacity=1-t;});
+  presentPlane.visible=false;presentPlane.material.opacity=1;presentPlane.position.y=-0.35;
+}
+
+/* ============================== GAME FLOW ============================== */
+function startGame(names){
+  G.players=names.map(n=>({name:n}));
+  G.current=0;G.volcano=0;
+  resetRound();
+  buildVMeter();paintVMeter();
+  G.busy=false;G.phase="roll";
+  updateTurn();renderTracker();
+  setMsg(`${cur().name}, tap Roll to begin!`);
+  setRollUI(true);
+}
+function resetRound(){
+  // shuffle deck onto chips
+  const deck=[{type:"dino",dino:"stego"},{type:"dino",dino:"trike"},{type:"dino",dino:"bronto"},{type:"trex"}];
+  ITEMS.forEach(it=>deck.push({type:"item",item:it.key}));
+  for(let i=deck.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[deck[i],deck[j]]=[deck[j],deck[i]];}
+  G.chips.forEach((c,i)=>{
+    const d=deck[i];c.type=d.type;c.dino=d.dino||null;c.item=d.item||null;
+    c.removed=false;c.faceUp=false;c.mesh.visible=true;c.mesh.rotation.x=0;c.mesh.scale.set(1,1,1);
+    const key=d.type==="dino"?("dino:"+d.dino):d.type==="trex"?"trex":("item:"+d.item);
+    c.mesh.material[2].map=faceTex(key);c.mesh.material[2].needsUpdate=true;
+  });
+  G.dinos.forEach(d=>{d.escaped=false;d.tile=d.start;d.group.visible=true;
+    const p=tilePos(d.tile);d.group.position.set(p.x,0,p.z);});
+  G.volcano=0;setVolcanoSize(0,false);
+}
+function cur(){return G.players[G.current];}
+
+function buildVMeter(){const m=document.getElementById("vmeter");m.innerHTML="";
+  for(let i=0;i<5;i++){const d=document.createElement("div");d.className="vseg";m.appendChild(d);}}
+function paintVMeter(){
+  document.querySelectorAll("#vmeter .vseg").forEach((s,i)=>s.classList.toggle("on",i<G.volcano));
+}
+function updateTurn(){
+  document.getElementById("turnName").textContent=cur().name+"'s turn";
+  document.getElementById("turnDot").style.background="#"+(["e8541e"][0]);
+}
+function setMsg(t){document.getElementById("msg").innerHTML=t;}
+function setRollUI(show){
+  const b=document.getElementById("rollBtn");
+  b.classList.toggle("hide",!show);b.disabled=!show||G.busy;
+}
+function renderTracker(){
+  const t=document.getElementById("tracker");
+  let h='<div class="ttl">🦕 Rescue all 3</div>';
+  G.dinos.forEach(d=>{h+=`<div class="d ${d.escaped?'safe':'away'}"><span class="sw" style="background:${d.color}"></span>${d.name}</div>`;});
+  t.innerHTML=h;
+}
+
+async function doRoll(){
+  if(G.busy||G.phase!=="roll")return;G.busy=true;setRollUI(true);
+  const die=document.getElementById("die");die.classList.add("spin");setMsg("Rolling…");
+  const faces=["1","2","3","4","5","🌋"];
+  for(let i=0;i<10;i++){die.textContent=faces[(Math.random()*6)|0];await sleep(70);}
+  die.classList.remove("spin");
+  const r=(Math.random()*6)|0; // 0..5; 5 -> volcano
+  if(r===5){
+    die.textContent="🌋";G.volcano++;paintVMeter();
+    setMsg(`🌋 The volcano swells and rumbles! (${G.volcano} / 5)`);
+    await setVolcanoSize(G.volcano,true);
+    await sleep(450);
+    if(G.volcano>=5){G.busy=false;return gameOver(false);}
+    G.busy=false;endTurn();return;
+  }
+  G.roll=r+1;die.textContent=String(G.roll);
+  G.phase="selectDino";G.selected=null;G.busy=false;setRollUI(false);
+  setMsg(`Rolled <b>${G.roll}</b>! Tap a dinosaur to move it.`);
+}
+
+function selectDino(idx){
+  const d=G.dinos[idx];if(d.escaped)return;
+  G.selected=d;
+  G.reachable=[(d.tile+G.roll)%TILES,(d.tile-G.roll+TILES)%TILES];
+  G.phase="selectTile";
+  setMsg(`Move the <b>${d.name}</b> — tap a glowing square.`);
+}
+
+async function moveTo(tileIdx){
+  const d=G.selected;const fwd=(d.tile+G.roll)%TILES;
+  const dir=(tileIdx===fwd)?1:-1;
+  G.busy=true;G.phase="moving";G.reachable=[];const sel=d;G.selected=null;
+  setMsg(`The ${d.name} is on the move…`);
+  for(let s=0;s<G.roll;s++){
+    const from=tilePos(d.tile),to=tilePos((d.tile+dir+TILES)%TILES);
+    await anim(180,t=>{d.group.position.x=lerp(from.x,to.x,t);d.group.position.z=lerp(from.z,to.z,t);
+      d.group.position.y=Math.sin(t*Math.PI)*0.6;});
+    d.tile=(d.tile+dir+TILES)%TILES;d.group.position.set(to.x,0,to.z);
+  }
+  G.busy=false;resolveLanding(sel);
+}
+
+function regionChips(reg){return G.chips.filter(c=>c.region===reg&&!c.removed);}
+function resolveLanding(d){
+  const reg=regionOfTile(d.tile);
+  if(LIVE.includes(reg)&&regionChips(reg).length){
+    G.phase="flip";G.flipRegion=reg;G.flipDino=d;G.busy=false;
+    setMsg(`In ${LAND_NAME[reg]}! 🌿 Tap a fern chip to peek.`);
+  }else{
+    setMsg(reg==="desert"?"Dry desert — nothing to peek. 🏜️":"No chips left here.");
+    setTimeout(endTurn,850);
+  }
+}
+
+async function flipChip(c){
+  if(G.busy||G.phase!=="flip"||c.removed||c.region!==G.flipRegion||c.faceUp)return;
+  G.busy=true;c.faceUp=true;
+  const d=G.flipDino;
+  const key=c.type==="dino"?("dino:"+c.dino):c.type==="trex"?"trex":("item:"+c.item);
+  // little lift of the real chip on the board, then big reveal up at the camera
+  anim(360,t=>{c.mesh.position.y=c.baseY+t*0.5;c.mesh.rotation.x=Math.PI*t;});
+  await presentReveal(key);
+  if(c.type==="dino"&&c.dino===d.key){
+    setMsg(`🎉 The ${d.name} found its picture — escaping to the Safe Island!`);
+    await sleep(1250);await dismissReveal();
+    // poof the board chip, then fly the dino home
+    c.removed=true;
+    anim(360,t=>{c.mesh.scale.setScalar(1-t);c.mesh.position.y=c.baseY+0.5+t*0.6;});
+    await escapeDino(d);
+    c.mesh.visible=false;
+    G.busy=false;
+    if(G.dinos.every(x=>x.escaped))return gameOver(true);
+    endTurn();return;
+  }
+  if(c.type==="dino"){
+    const od=DINOS.find(x=>x.key===c.dino);
+    setMsg(`That's the <b>${od.name}'s</b> picture — remember the spot! 🧠`);
+  }else if(c.type==="trex"){
+    setMsg("🦖 The mean T‑Rex! The "+d.name+" runs back to its start!");
+  }else{
+    const it=ITEMS.find(x=>x.key===c.item);
+    setMsg(`${it.emoji} Just a ${it.name.toLowerCase()}. Nothing happens.`);
+  }
+  await sleep(1300);await dismissReveal();
+  // lay the real board chip back down, fern-side up (memory!)
+  await anim(340,t=>{c.mesh.position.y=lerp(c.baseY+0.5,c.baseY,t);c.mesh.rotation.x=Math.PI*(1-t);});
+  c.mesh.rotation.x=0;c.mesh.position.y=c.baseY;
+  if(c.type==="trex"){
+    const to=tilePos(d.start),from=d.group.position.clone();
+    await anim(560,t=>{d.group.position.x=lerp(from.x,to.x,t);d.group.position.z=lerp(from.z,to.z,t);
+      d.group.position.y=Math.sin(t*Math.PI)*1.1;});
+    d.tile=d.start;d.group.position.set(to.x,0,to.z);
+  }
+  c.faceUp=false;G.busy=false;endTurn();
+}
+
+async function escapeDino(d){
+  const slot=safeSlots[G.dinos.filter(x=>x.escaped).length]||safeSlots[0];
+  const from=d.group.position.clone();
+  await anim(950,t=>{d.group.position.x=lerp(from.x,slot.x,t);d.group.position.z=lerp(from.z,slot.z,t);
+    d.group.position.y=Math.sin(t*Math.PI)*2.4;});
+  d.escaped=true;d.group.position.set(slot.x,0.5,slot.z);
+  renderTracker();
+}
+
+function endTurn(){
+  G.selected=null;G.reachable=[];G.flipRegion=null;G.flipDino=null;
+  if(G.dinos.every(x=>x.escaped))return gameOver(true);
+  G.current=(G.current+1)%G.players.length;
+  G.phase="roll";updateTurn();
+  setMsg(`${cur().name}, tap Roll!`);setRollUI(true);
+}
+
+function gameOver(win){
+  G.phase="over";G.busy=true;
+  const ov=document.getElementById("over");
+  if(win){
+    document.getElementById("overEmoji").textContent="🏝️🎉🦕";
+    document.getElementById("overTitle").textContent="Everyone Escaped!";
+    document.getElementById("overText").textContent="All three dinosaurs reached the Safe Island before the volcano blew. Great teamwork — you win together!";
+  }else{
+    document.getElementById("overEmoji").textContent="🌋💥";
+    document.getElementById("overTitle").textContent="The Volcano Erupted!";
+    const left=G.dinos.filter(x=>!x.escaped).map(x=>x.name).join(" & ");
+    document.getElementById("overText").textContent=`Boom! It blew before everyone escaped. ${left} didn't make it — help each other remember the chips and try again!`;
+  }
+  ov.classList.remove("hide");
+}
+
+/* ============================== INPUT ============================== */
+function bindPointer(){
+  const el=renderer.domElement;
+  let down=false,moved=false,lx=0,ly=0;
+  el.addEventListener("pointerdown",e=>{down=true;moved=false;lx=e.clientX;ly=e.clientY;el.setPointerCapture(e.pointerId);});
+  el.addEventListener("pointermove",e=>{if(!down)return;const dx=e.clientX-lx,dy=e.clientY-ly;
+    if(Math.abs(dx)+Math.abs(dy)>4)moved=true;
+    theta-=dx*0.006;phi=Math.max(0.45,Math.min(1.18,phi-dy*0.004));updateCamera();lx=e.clientX;ly=e.clientY;});
+  el.addEventListener("pointerup",e=>{down=false;if(!moved)handleClick(e);});
+  el.addEventListener("wheel",e=>{camR=Math.max(14,Math.min(38,camR+e.deltaY*0.02));updateCamera();e.preventDefault();},{passive:false});
+}
+function handleClick(e){
+  if(G.busy)return;
+  const rect=renderer.domElement.getBoundingClientRect();
+  const m=new THREE.Vector2(((e.clientX-rect.left)/rect.width)*2-1,-((e.clientY-rect.top)/rect.height)*2+1);
+  raycaster.setFromCamera(m,camera);
+  const picks=[];
+  G.dinos.forEach(d=>{if(!d.escaped){picks.push(d.base);picks.push(d.sprite);}});
+  G.tiles.forEach(t=>picks.push(t.mesh));
+  G.chips.forEach(c=>{if(!c.removed)picks.push(c.mesh);});
+  const hits=raycaster.intersectObjects(picks,false);
+  if(!hits.length)return;
+  const u=hits[0].object.userData;
+  if(u.kind==="dino"&&(G.phase==="selectDino"||G.phase==="selectTile")){selectDino(u.idx);return;}
+  if(u.kind==="tile"&&G.phase==="selectTile"&&G.reachable.includes(u.i)){moveTo(u.i);return;}
+  if(u.kind==="chip"&&G.phase==="flip"){const c=G.chips.find(x=>x.mesh===hits[0].object);if(c)flipChip(c);return;}
+}
+
+/* ============================== RENDER LOOP ============================== */
+function updateHighlights(t){
+  G.dinos.forEach(d=>{let it=0;
+    if(G.phase==="selectDino")it=0.30+0.30*Math.sin(t*4);
+    else if(G.phase==="selectTile"&&G.selected===d)it=0.55;
+    d.base.material.emissiveIntensity=it;});
+
+  const reach=(G.phase==="selectTile");
+  const pulse=0.5+0.5*Math.sin(t*6);
+  let mk=0;
+  G.tiles.forEach(tl=>{
+    const on=reach&&G.reachable.includes(tl.i);
+    if(on){
+      tl.mesh.material.emissive.setHex(0x39ff9d);
+      tl.mesh.material.emissiveIntensity=0.7+0.6*pulse;
+      tl.mesh.position.y=tl.baseY+0.18+0.05*pulse;       // pop up
+      const s=1.0+0.06*pulse; tl.mesh.scale.set(s,1.25,s);
+      const m=tileMarkers[mk++]; if(m){m.visible=true;
+        m.position.set(tl.pos.x,0.0,tl.pos.z);
+        m.children[1].position.y=1.65+0.18*Math.sin(t*5); // bobbing arrow
+        m.rotation.y=t*1.4;}
+    }else{
+      tl.mesh.material.emissive.setHex(0xffd23e);
+      tl.mesh.material.emissiveIntensity=0;
+      tl.mesh.position.y=tl.baseY; tl.mesh.scale.set(1,1,1);
+    }
+  });
+  for(let k=mk;k<tileMarkers.length;k++) tileMarkers[k].visible=false;
+
+  G.chips.forEach(c=>{if(c.removed)return;let it=0,bob=0;
+    if(G.phase==="flip"&&!G.busy&&c.region===G.flipRegion&&!c.faceUp){it=0.5+0.4*Math.sin(t*5);bob=0.10+0.08*Math.sin(t*3);}
+    c.mesh.material[1].emissiveIntensity=it;
+    if(!c.faceUp&&!G.busy)c.mesh.position.y=c.baseY+bob;else if(!c.faceUp)c.mesh.position.y=c.baseY;});
+}
+function loop(){
+  requestAnimationFrame(loop);
+  const t=clock?clock.getElapsedTime():0;
+  if(G.phase!=="idle")updateHighlights(t);
+  renderer.render(scene,camera);
+}
+
+/* ============================== UI WIRING ============================== */
+let chosenN=2;
+function buildNameInputs(n){
+  const box=document.getElementById("names");box.innerHTML="";
+  for(let i=0;i<n;i++){const inp=document.createElement("input");inp.type="text";inp.maxLength=14;
+    inp.value="Player "+(i+1);inp.placeholder="Player "+(i+1);box.appendChild(inp);}
+}
+document.querySelectorAll("#pcount button").forEach(b=>b.addEventListener("click",()=>{
+  document.querySelectorAll("#pcount button").forEach(x=>x.classList.remove("sel"));
+  b.classList.add("sel");chosenN=+b.dataset.n;buildNameInputs(chosenN);}));
+document.getElementById("startBtn").addEventListener("click",()=>{
+  const names=[...document.querySelectorAll("#names input")].map((i,k)=>i.value.trim()||("Player "+(k+1)));
+  document.getElementById("setup").classList.add("hide");
+  startGame(names);
+});
+document.getElementById("rollBtn").addEventListener("click",doRoll);
+document.getElementById("againBtn").addEventListener("click",()=>{
+  document.getElementById("over").classList.add("hide");
+  document.getElementById("setup").classList.remove("hide");
+});
+
+/* ============================== BOOT ============================== */
+window.addEventListener("load",()=>{
+  if(!window.THREE){document.getElementById("loading").textContent="Could not load 3D engine — check your connection.";return;}
+  try{
+    initThree();loop();
+    document.getElementById("loading").classList.add("hide");
+    document.getElementById("setup").classList.remove("hide");
+    buildNameInputs(chosenN);
+    setMsg("Set up your players to begin!");
+  }catch(err){
+    document.getElementById("loading").textContent="Something went wrong starting the game.";
+    console.error(err);
+  }
+});
+</script>
+</body>
+</html>
