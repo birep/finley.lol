@@ -711,8 +711,7 @@ async function flipChip(c){
   }else if(c.type==="trex"){
     setMsg("🦖 The mean T‑Rex! The "+d.name+" runs back to its start!");
   }else{
-    const it=ITEMS.find(x=>x.key===c.item);
-    setMsg(`${it.emoji} Just a little find — nothing happens.`);
+    setMsg(`No dinos here! Keep looking.`);
   }
   await sleep(1300);await dismissReveal();
   // lay the real board chip back down, fern-side up (memory!)
