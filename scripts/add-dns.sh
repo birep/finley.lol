@@ -44,7 +44,21 @@ if [ -z "$ZONE_ID" ]; then
 fi
 
 DNS_NAME="${GAME_NAME}.${DOMAIN}"
-echo "Adding/updating DNS record: ${DNS_NAME} → ${GAME_NAME}.pages.dev"
+
+# Determine the real Pages subdomain. Cloudflare appends a suffix (e.g. dinos-14u)
+# when the bare <name>.pages.dev is already taken by another account. Pointing the
+# CNAME at the bare name in that case causes Error 1014 (CNAME Cross-User Banned).
+TARGET="${GAME_NAME}.pages.dev"
+if [ -n "$CLOUDFLARE_ACCOUNT_ID" ]; then
+    REAL_SUBDOMAIN=$(curl -s -X GET "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/pages/projects/${GAME_NAME}" \
+      -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+      -H "Content-Type: application/json" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('result',{}).get('subdomain','') if d.get('success') else '')")
+    if [ -n "$REAL_SUBDOMAIN" ]; then
+        TARGET="$REAL_SUBDOMAIN"
+    fi
+fi
+
+echo "Adding/updating DNS record: ${DNS_NAME} → ${TARGET}"
 
 # Check if record exists
 RECORD_EXISTS=$(curl -s -X GET "https://api.cloudflare.com/client/v4/zones/${ZONE_ID}/dns_records?name=${DNS_NAME}" \
@@ -62,7 +76,7 @@ if [ "$RECORD_EXISTS" = "true" ]; then
           -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
           -H "Content-Type: application/json" \
           -d "{
-            \"content\": \"${GAME_NAME}.pages.dev\",
+            \"content\": \"${TARGET}\",
             \"proxied\": true
           }" > /dev/null
         echo "✅ DNS record updated"
@@ -77,7 +91,7 @@ else
       -d "{
         \"type\": \"CNAME\",
         \"name\": \"${GAME_NAME}\",
-        \"content\": \"${GAME_NAME}.pages.dev\",
+        \"content\": \"${TARGET}\",
         \"ttl\": 1,
         \"proxied\": true
       }" > /dev/null

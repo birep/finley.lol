@@ -272,9 +272,8 @@ function faceTex(key){
   } else {
     const it=ITEMS.find(i=>"item:"+i.key===key);
     ctx.restore();
-    ctx.font="92px serif";ctx.textAlign="center";ctx.textBaseline="middle";
-    ctx.fillText(it.emoji,128,110);
-    caption(ctx,it.name,232);
+    ctx.font="120px serif";ctx.textAlign="center";ctx.textBaseline="middle";
+    ctx.fillText(it.emoji,128,128);
   }
   _texCache[key]=tex(c);return _texCache[key];
 }
@@ -713,7 +712,7 @@ async function flipChip(c){
     setMsg("🦖 The mean T‑Rex! The "+d.name+" runs back to its start!");
   }else{
     const it=ITEMS.find(x=>x.key===c.item);
-    setMsg(`${it.emoji} Just a ${it.name.toLowerCase()}. Nothing happens.`);
+    setMsg(`${it.emoji} Just a little find — nothing happens.`);
   }
   await sleep(1300);await dismissReveal();
   // lay the real board chip back down, fern-side up (memory!)
@@ -792,7 +791,7 @@ function handleClick(e){
 /* ============================== RENDER LOOP ============================== */
 function updateHighlights(t){
   G.dinos.forEach(d=>{let it=0;
-    if(G.phase==="selectDino")it=0.30+0.30*Math.sin(t*4);
+    if(G.phase==="selectDino"&&!d.escaped)it=0.30+0.30*Math.sin(t*4);
     else if(G.phase==="selectTile"&&G.selected===d)it=0.55;
     d.base.material.emissiveIntensity=it;});
 
