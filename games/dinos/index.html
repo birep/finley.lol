@@ -149,8 +149,14 @@
 <script>
 "use strict";
 /* ============================== DATA ============================== */
-const TILES=30, ARCS=6, PER_ARC=5, STEP=Math.PI*2/TILES;
+const ARCS=6;
 const ARC_REGION=["desert","forest","desert","mountain","desert","rock"];
+const ARC_COUNTS=[4,5,4,5,4,5];   // desert wedges have 4 landing tiles, live wedges 5
+const ARC_START=[], TILE_REGION=[];
+for(let a=0,s=0;a<ARCS;a++){ARC_START[a]=s;for(let k=0;k<ARC_COUNTS[a];k++)TILE_REGION.push(ARC_REGION[a]);s+=ARC_COUNTS[a];}
+const TILES=TILE_REGION.length;   // 27
+const STEP=Math.PI*2/TILES;
+const arcMid=a=>(ARC_START[a]+(ARC_COUNTS[a]-1)/2)*STEP;   // angular centre of wedge a
 const LIVE=["forest","mountain","rock"];
 const LAND_NAME={forest:"the Fern Forest",mountain:"the Misty Mountains",rock:"the Red Rocks"};
 const REGION_COLOR={desert:0xe7d5a3,forest:0x6fae54,mountain:0x6fa6db,rock:0xd98a4e};
@@ -158,9 +164,9 @@ const WEDGE_COLOR={desert:0xe2d2a0,forest:0x7cb85f,mountain:0x86b6e0,rock:0xcf8a
 const RING_R=9.2, INNER_R=10.0;
 
 const DINOS=[
-  {key:"stego",  name:"Stegosaurus", color:"#5f9e4f", hex:0x5f9e4f, start:2},
-  {key:"trike",  name:"Triceratops", color:"#d56a86", hex:0xd56a86, start:12},
-  {key:"bronto", name:"Brontosaurus",color:"#9c6b3f", hex:0x9c6b3f, start:22},
+  {key:"stego",  name:"Stegosaurus", color:"#5f9e4f", hex:0x5f9e4f, start:1},
+  {key:"trike",  name:"Triceratops", color:"#d56a86", hex:0xd56a86, start:10},
+  {key:"bronto", name:"Brontosaurus",color:"#9c6b3f", hex:0x9c6b3f, start:19},
 ];
 const ITEMS=[
   {key:"feather",name:"Feather",emoji:"🪶"},
@@ -317,7 +323,7 @@ const G={players:[],current:0,volcano:0,roll:0,phase:"idle",busy:true,
   dinos:[],tiles:[],chips:[],selected:null,reachable:[],flipRegion:null,flipDino:null};
 
 function tilePos(i){const a=i*STEP;return new THREE.Vector3(Math.cos(a)*RING_R,0,Math.sin(a)*RING_R);}
-function regionOfTile(i){return ARC_REGION[Math.floor(i/PER_ARC)];}
+function regionOfTile(i){return TILE_REGION[i];}
 
 function annularSector(rIn,rOut,a0,a1){
   const s=new THREE.Shape();
@@ -327,6 +333,23 @@ function annularSector(rIn,rOut,a0,a1){
   s.lineTo(Math.cos(a1)*rIn,Math.sin(a1)*rIn);
   s.absarc(0,0,rIn,a1,a0,true);
   return s;
+}
+
+// Warp a radially-symmetric geometry (e.g. a cylinder) so its silhouette becomes
+// an irregular, organic coastline instead of a perfect circle. Each vertex's radius
+// is scaled by a smooth angular wobble; height and centre axis are preserved, so any
+// concentric pieces using the same wobble stay nested (no overhang).
+function organicize(geo,amp){
+  const pos=geo.attributes.position;
+  for(let i=0;i<pos.count;i++){
+    const x=pos.getX(i),z=pos.getZ(i),r=Math.hypot(x,z);
+    if(r<0.001)continue;
+    const a=Math.atan2(z,x);
+    const f=1+amp*(Math.sin(a*3)*0.5+Math.sin(a*5+1.3)*0.3+Math.sin(a*2+2.1)*0.2);
+    pos.setX(i,x*f);pos.setZ(i,z*f);
+  }
+  pos.needsUpdate=true;geo.computeVertexNormals();
+  return geo;
 }
 
 function initThree(){
@@ -423,14 +446,14 @@ async function setVolcanoSize(v,animate){
 
 function buildIsland(){
   // base landmass
-  const base=new THREE.Mesh(new THREE.CylinderGeometry(INNER_R+0.6,INNER_R+1.4,1.2,64),
+  const base=new THREE.Mesh(organicize(new THREE.CylinderGeometry(INNER_R+1.0,INNER_R+1.8,1.2,72),0.07),
     new THREE.MeshStandardMaterial({color:0xd8c79a,roughness:1}));
   base.position.y=-0.2;base.receiveShadow=true;board.add(base);
 
   // wedges
   for(let a=0;a<ARCS;a++){
     const reg=ARC_REGION[a];
-    const a0=(a*PER_ARC-0.5)*STEP, a1=(a*PER_ARC+PER_ARC-0.5)*STEP;
+    const a0=(ARC_START[a]-0.5)*STEP, a1=(ARC_START[a]+ARC_COUNTS[a]-0.5)*STEP;
     const geo=new THREE.ShapeGeometry(annularSector(1.7,INNER_R,a0,a1),28);
     const m=new THREE.Mesh(geo,new THREE.MeshStandardMaterial({color:WEDGE_COLOR[reg],roughness:1,side:THREE.DoubleSide}));
     m.rotation.x=Math.PI/2;m.position.y=0.45;m.receiveShadow=true;board.add(m);
@@ -485,7 +508,7 @@ function buildIsland(){
 }
 
 function addDecor(reg,a){
-  const mid=(a*PER_ARC+PER_ARC/2-0.5)*STEP;
+  const mid=arcMid(a);
   function at(r,off,fn){const ang=mid+off;fn(Math.cos(ang)*r,Math.sin(ang)*r);}
   if(reg==="forest"){
     [[8.4,-0.45],[8.6,0.0],[8.3,0.45]].forEach(([r,o])=>at(r,o,(x,z)=>{
@@ -508,7 +531,7 @@ function buildChips(){
   const fern=fernTex();
   LIVE.forEach(reg=>{
     const arc=ARC_REGION.indexOf(reg);
-    const c=(arc*PER_ARC+PER_ARC/2-0.5)*STEP;
+    const c=arcMid(arc);
     const slots=[[5.0,-0.55],[6.6,-0.28],[5.0,0.28],[6.6,0.55]];
     slots.forEach((sl,k)=>{
       const ang=c+sl[1],r=sl[0],x=Math.cos(ang)*r,z=Math.sin(ang)*r;
@@ -544,10 +567,10 @@ function buildDinos(){
 let safeSlots=[];
 function buildSafeIsland(){
   const g=new THREE.Group();g.position.set(-13.5,0,-7);
-  const isl=new THREE.Mesh(new THREE.CylinderGeometry(4.2,4.8,1.0,40),
+  const isl=new THREE.Mesh(organicize(new THREE.CylinderGeometry(4.2,4.8,1.0,48),0.12),
     new THREE.MeshStandardMaterial({color:0xdcc79a,roughness:1}));
   isl.position.y=-0.1;isl.receiveShadow=true;g.add(isl);
-  const grass=new THREE.Mesh(new THREE.CylinderGeometry(3.4,3.4,0.2,40),
+  const grass=new THREE.Mesh(organicize(new THREE.CylinderGeometry(3.4,3.4,0.2,48),0.12),
     new THREE.MeshStandardMaterial({color:0x7cbf5a,roughness:1}));
   grass.position.y=0.42;g.add(grass);
   // palm
@@ -709,7 +732,7 @@ async function flipChip(c){
     const od=DINOS.find(x=>x.key===c.dino);
     setMsg(`That's the <b>${od.name}'s</b> picture — remember the spot! 🧠`);
   }else if(c.type==="trex"){
-    setMsg("🦖 The mean T‑Rex! The "+d.name+" runs back to its start!");
+    setMsg("🦖 The mean T‑Rex! Every dino runs back to its start!");
   }else{
     setMsg(`No dinos here! Keep looking.`);
   }
@@ -718,10 +741,12 @@ async function flipChip(c){
   await anim(340,t=>{c.mesh.position.y=lerp(c.baseY+0.5,c.baseY,t);c.mesh.rotation.x=Math.PI*(1-t);});
   c.mesh.rotation.x=0;c.mesh.position.y=c.baseY;
   if(c.type==="trex"){
-    const to=tilePos(d.start),from=d.group.position.clone();
-    await anim(560,t=>{d.group.position.x=lerp(from.x,to.x,t);d.group.position.z=lerp(from.z,to.z,t);
-      d.group.position.y=Math.sin(t*Math.PI)*1.1;});
-    d.tile=d.start;d.group.position.set(to.x,0,to.z);
+    const movers=G.dinos.filter(x=>!x.escaped);
+    const froms=movers.map(x=>x.group.position.clone());
+    await anim(560,t=>{movers.forEach((x,k)=>{const to=tilePos(x.start),from=froms[k];
+      x.group.position.x=lerp(from.x,to.x,t);x.group.position.z=lerp(from.z,to.z,t);
+      x.group.position.y=Math.sin(t*Math.PI)*1.1;});});
+    movers.forEach(x=>{const to=tilePos(x.start);x.tile=x.start;x.group.position.set(to.x,0,to.z);});
   }
   c.faceUp=false;G.busy=false;endTurn();
 }
