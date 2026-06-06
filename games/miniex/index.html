@@ -1,0 +1,1167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RIPPA R10 — Mini Excavator Control Trainer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Oxanium:wght@400;600;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#15140f; --panel:#1f1d16; --panel2:#26241b; --line:#3a3627;
+    --amber:#f4b400; --amber-d:#c98f00; --safe:#ffd21a; --hazard:#0c0b08;
+    --green:#54d36b; --red:#ff5a47; --txt:#e9e3cf; --dim:#9c9580; --blue:#5bbcff;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html,body{height:100%; overflow:hidden; background:var(--bg);
+    color:var(--txt); font-family:'IBM Plex Mono',monospace; -webkit-user-select:none; user-select:none;}
+  #app{position:fixed; inset:0;}
+  canvas{display:block;}
+
+  /* ---- Top bar ---- */
+  #topbar{position:absolute; top:0; left:0; right:0; height:52px; z-index:20;
+    display:flex; align-items:center; gap:14px; padding:0 16px;
+    background:linear-gradient(180deg,rgba(20,19,14,.95),rgba(20,19,14,.6));
+    border-bottom:1px solid var(--line);
+    backdrop-filter:blur(4px);}
+  .brand{font-family:'Oxanium',sans-serif; font-weight:800; letter-spacing:.5px; font-size:18px;}
+  .brand b{color:var(--amber);}
+  .brand small{display:block; font-size:9px; letter-spacing:3px; color:var(--dim); font-weight:600;}
+  .hazard{flex:0 0 auto; width:70px; height:14px; border:1px solid var(--line);
+    background:repeating-linear-gradient(45deg,var(--safe) 0 9px,var(--hazard) 9px 18px);}
+  .lights{margin-left:auto; display:flex; gap:8px; align-items:center;}
+  .lamp{display:flex; align-items:center; gap:6px; font-size:10px; color:var(--dim);
+    text-transform:uppercase; letter-spacing:1px;}
+  .dot{width:12px; height:12px; border-radius:50%; background:#2a281d;
+    border:1px solid #000; box-shadow:inset 0 0 3px #000;}
+  .dot.on.eng{background:var(--green); box-shadow:0 0 9px var(--green);}
+  .dot.on.lock{background:var(--red); box-shadow:0 0 9px var(--red);}
+  .dot.on.amber{background:var(--amber); box-shadow:0 0 9px var(--amber);}
+
+  /* ---- Left telemetry ---- */
+  #telemetry{position:absolute; left:12px; top:62px; z-index:15; width:212px;
+    background:rgba(31,29,22,.92); border:1px solid var(--line); border-radius:8px;
+    padding:10px 12px;}
+  .secttl{font-family:'Oxanium',sans-serif; font-weight:700; font-size:11px;
+    letter-spacing:2px; color:var(--amber); text-transform:uppercase;
+    border-bottom:1px solid var(--line); padding-bottom:5px; margin-bottom:8px;}
+  .row{display:flex; justify-content:space-between; font-size:11px; padding:2px 0; color:var(--dim);}
+  .row b{color:var(--txt); font-weight:600;}
+  .bar{height:5px; background:#000; border-radius:3px; overflow:hidden; margin:3px 0 7px;}
+  .bar > i{display:block; height:100%; background:linear-gradient(90deg,var(--amber-d),var(--amber)); width:0%;}
+  .gauge{display:flex; gap:6px; margin-top:6px;}
+  .gauge .g{flex:1; text-align:center; background:#000; border:1px solid var(--line);
+    border-radius:6px; padding:5px 0;}
+  .gauge .g .v{font-size:15px; font-weight:600; color:var(--amber);}
+  .gauge .g .l{font-size:8px; color:var(--dim); letter-spacing:1px;}
+
+  /* ---- Right switch panel ---- */
+  #switches{position:absolute; right:12px; top:62px; z-index:15; width:174px;
+    background:rgba(31,29,22,.92); border:1px solid var(--line); border-radius:8px; padding:10px;}
+  .btn{display:flex; align-items:center; justify-content:space-between; width:100%;
+    background:var(--panel2); border:1px solid var(--line); color:var(--txt);
+    font-family:'IBM Plex Mono',monospace; font-size:11px; padding:7px 9px;
+    border-radius:6px; cursor:pointer; margin-bottom:6px; transition:.12s;}
+  .btn:hover{border-color:var(--amber-d); background:#302d20;}
+  .btn .st{font-size:9px; letter-spacing:1px; padding:2px 6px; border-radius:4px;
+    background:#000; color:var(--dim);}
+  .btn .st.on{background:var(--amber); color:#000;}
+  .btn .st.red{background:var(--red); color:#000;}
+  .btn .st.grn{background:var(--green); color:#000;}
+  .keysw{display:flex; gap:4px; margin-bottom:8px;}
+  .keysw button{flex:1; font-size:9px; padding:6px 0; background:var(--panel2);
+    border:1px solid var(--line); color:var(--dim); border-radius:5px; cursor:pointer;
+    font-family:'IBM Plex Mono',monospace; letter-spacing:1px;}
+  .keysw button.act{background:var(--amber); color:#000; border-color:var(--amber);}
+  .hint{font-size:8.5px; color:var(--dim); line-height:1.45; margin-top:4px;}
+
+  /* ---- Bottom legend ---- */
+  #legend{position:absolute; left:50%; transform:translateX(-50%); bottom:10px; z-index:15;
+    display:flex; gap:10px; align-items:stretch;}
+  .stick{background:rgba(31,29,22,.94); border:1px solid var(--line); border-radius:9px;
+    padding:9px 12px; width:228px;}
+  .stick h4{font-family:'Oxanium',sans-serif; font-size:11px; letter-spacing:1.5px;
+    color:var(--amber); margin-bottom:7px; display:flex; justify-content:space-between;}
+  .stick h4 span{color:var(--dim); font-weight:400; font-size:9px;}
+  .cross{display:grid; grid-template-columns:repeat(3,1fr); grid-template-rows:repeat(3,22px);
+    gap:2px; font-size:9px;}
+  .cell{display:flex; align-items:center; justify-content:center; text-align:center;
+    background:#000; border:1px solid #2a271c; border-radius:4px; color:var(--txt);
+    line-height:1.05; padding:1px; font-size:8.5px;}
+  .cell.c{background:#221f16; color:var(--dim);}
+  .cell .k{display:inline-block; background:var(--amber); color:#000; border-radius:3px;
+    padding:0 3px; font-weight:600; margin-bottom:1px;}
+  .other{background:rgba(31,29,22,.94); border:1px solid var(--line); border-radius:9px;
+    padding:9px 12px; width:210px; font-size:9.5px;}
+  .other h4{font-family:'Oxanium',sans-serif; font-size:11px; letter-spacing:1.5px;
+    color:var(--amber); margin-bottom:7px;}
+  .other .l{display:flex; justify-content:space-between; padding:2.5px 0; color:var(--dim);
+    border-bottom:1px dotted #2a271c;}
+  .other .l b{color:var(--txt);}
+  kbd{background:#000; border:1px solid var(--line); border-bottom-width:2px; border-radius:4px;
+    padding:0 5px; font-size:9px; color:var(--safe); font-family:'IBM Plex Mono',monospace;}
+
+  /* ---- Toast / guidance ---- */
+  #toast{position:absolute; left:50%; top:64px; transform:translateX(-50%); z-index:30;
+    background:rgba(12,11,8,.95); border:1px solid var(--amber); color:var(--safe);
+    padding:9px 18px; border-radius:7px; font-size:12px; letter-spacing:.5px;
+    opacity:0; transition:.25s; pointer-events:none; max-width:60vw; text-align:center;}
+  #toast.show{opacity:1;}
+
+  /* ---- View toggle ---- */
+  #viewtog{position:absolute; right:12px; bottom:12px; z-index:15; display:flex; gap:6px;}
+  #viewtog button{background:rgba(31,29,22,.94); border:1px solid var(--line); color:var(--txt);
+    font-family:'IBM Plex Mono',monospace; font-size:10px; padding:8px 11px; border-radius:7px;
+    cursor:pointer; letter-spacing:1px;}
+  #viewtog button.act{background:var(--amber); color:#000; border-color:var(--amber);}
+
+  /* ---- Checklist ---- */
+  #checklist{position:absolute; left:12px; bottom:12px; z-index:15; width:212px;
+    background:rgba(31,29,22,.94); border:1px solid var(--line); border-radius:8px; padding:9px 12px;}
+  #checklist h4{font-family:'Oxanium',sans-serif; font-size:10px; letter-spacing:1.5px;
+    color:var(--amber); margin-bottom:6px;}
+  .chk{display:flex; align-items:center; gap:7px; font-size:9.5px; color:var(--dim); padding:2px 0;}
+  .chk .b{width:13px; height:13px; border:1px solid var(--line); border-radius:3px; flex:0 0 auto;
+    display:flex; align-items:center; justify-content:center; font-size:9px;}
+  .chk.done{color:var(--green);} .chk.done .b{background:var(--green); color:#000; border-color:var(--green);}
+
+  /* ---- Splash ---- */
+  #splash{position:absolute; inset:0; z-index:50; background:radial-gradient(circle at 50% 35%,#26241b,#0e0d09);
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:18px; text-align:center;}
+  #splash .logo{font-family:'Oxanium',sans-serif; font-weight:800; font-size:42px; letter-spacing:1px;}
+  #splash .logo b{color:var(--amber);}
+  #splash p{color:var(--dim); font-size:13px; max-width:440px; line-height:1.6;}
+  #splash .stripe{width:300px; height:16px; border:1px solid var(--line);
+    background:repeating-linear-gradient(45deg,var(--safe) 0 11px,var(--hazard) 11px 22px);}
+  #splash button{background:var(--amber); color:#000; border:none; font-family:'Oxanium',sans-serif;
+    font-weight:700; font-size:16px; letter-spacing:2px; padding:13px 40px; border-radius:8px;
+    cursor:pointer;}
+  #splash button:hover{background:var(--safe);}
+  .credit{font-size:10px; color:#5c5847; letter-spacing:1px;}
+  @media (max-width:1100px){ #legend .other{display:none;} }
+  @media (max-width:820px){ #telemetry,#checklist{display:none;} }
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<div id="topbar">
+  <div class="hazard"></div>
+  <div class="brand"><b>RIPPA R10</b><small>MINI EXCAVATOR · CONTROL TRAINER</small></div>
+  <div class="lights">
+    <div class="lamp"><span id="lampEng" class="dot eng"></span>ENGINE</div>
+    <div class="lamp"><span id="lampLock" class="dot lock on"></span>SAFETY LOCK</div>
+    <div class="lamp"><span id="lampHyd" class="dot amber"></span>HYDRAULICS</div>
+  </div>
+</div>
+
+<div id="telemetry">
+  <div class="secttl">Telemetry</div>
+  <div class="row"><span>Engine</span><b id="tEng">OFF</b></div>
+  <div class="row"><span>RPM</span><b id="tRpm">0</b></div>
+  <div class="row"><span>Throttle</span><b id="tThr">0%</b></div>
+  <div class="bar"><i id="barThr"></i></div>
+  <div class="row"><span>Travel mode</span><b id="tSpd">— </b></div>
+  <div class="row"><span>Material moved</span><b id="tDug">0.0</b></div>
+  <div class="secttl" style="margin-top:10px;">Implement angles</div>
+  <div class="gauge">
+    <div class="g"><div class="v" id="aBoom">0°</div><div class="l">BOOM</div></div>
+    <div class="g"><div class="v" id="aStick">0°</div><div class="l">STICK</div></div>
+    <div class="g"><div class="v" id="aBkt">0°</div><div class="l">BUCKET</div></div>
+  </div>
+  <div class="gauge">
+    <div class="g"><div class="v" id="aSwing">0°</div><div class="l">SWING</div></div>
+    <div class="g"><div class="v" id="aOff">0°</div><div class="l">OFFSET</div></div>
+    <div class="g"><div class="v" id="aDozer">0°</div><div class="l">DOZER</div></div>
+  </div>
+</div>
+
+<div id="switches">
+  <div class="secttl">Starter switch</div>
+  <div class="keysw">
+    <button id="kOff" class="act" data-k="0">OFF</button>
+    <button id="kOn" data-k="1">CONTACT</button>
+    <button id="kStart" data-k="2">START</button>
+  </div>
+  <div class="secttl">Controls / switches</div>
+  <button class="btn" id="bLock">SAFETY LOCK LEVER <span class="st red" id="sLock">LOCKED</span></button>
+  <button class="btn" id="bSpeed">TRAVEL SPEED <span class="st" id="sSpeed">TURTLE</span></button>
+  <button class="btn" id="bStance">TRACK STANCE <span class="st on" id="sStance">WIDE</span></button>
+  <button class="btn" id="bPreheat">PREHEAT (GLOW) <span class="st" id="sPre">OFF</span></button>
+  <button class="btn" id="bLight">WORK LIGHT <span class="st" id="sLight">OFF</span></button>
+  <button class="btn" id="bHorn">HORN <span class="st" id="sHorn">—</span></button>
+  <div class="hint">Faithful to manual: hydraulics work only with the <b>engine running</b> and the <b>safety-lock lever released</b>. Lock the lever before mounting / dismounting.</div>
+</div>
+
+<div id="checklist">
+  <h4>START PROCEDURE</h4>
+  <div class="chk" id="ck1"><span class="b"></span>Safety-lock lever → LOCKED</div>
+  <div class="chk" id="ck2"><span class="b"></span>Throttle → high (idle ok)</div>
+  <div class="chk" id="ck3"><span class="b"></span>Key → CONTACT</div>
+  <div class="chk" id="ck4"><span class="b"></span>Key → START (engine runs)</div>
+  <div class="chk" id="ck5"><span class="b"></span>Lock lever → RELEASED to operate</div>
+</div>
+
+<div id="legend">
+  <div class="stick">
+    <h4>LEFT JOYSTICK <span>arm + swing</span></h4>
+    <div class="cross">
+      <div class="cell c"></div>
+      <div class="cell"><span class="k">I</span>STICK OUT</div>
+      <div class="cell c"></div>
+      <div class="cell"><span class="k">J</span>SWING L</div>
+      <div class="cell c">●</div>
+      <div class="cell"><span class="k">L</span>SWING R</div>
+      <div class="cell c"></div>
+      <div class="cell"><span class="k">K</span>STICK IN</div>
+      <div class="cell c"></div>
+    </div>
+    <div class="hint" style="margin-top:6px;">Hold <kbd>B</kbd> + <kbd>J</kbd>/<kbd>L</kbd> = boom offset swing</div>
+  </div>
+  <div class="stick">
+    <h4>RIGHT JOYSTICK <span>boom + bucket</span></h4>
+    <div class="cross">
+      <div class="cell c"></div>
+      <div class="cell"><span class="k">W</span>BOOM DOWN</div>
+      <div class="cell c"></div>
+      <div class="cell"><span class="k">A</span>BUCKET CURL</div>
+      <div class="cell c">●</div>
+      <div class="cell"><span class="k">D</span>BUCKET DUMP</div>
+      <div class="cell c"></div>
+      <div class="cell"><span class="k">S</span>BOOM UP</div>
+      <div class="cell c"></div>
+    </div>
+    <div class="hint" style="margin-top:6px;">Per manual p.37 — ISO pattern</div>
+  </div>
+  <div class="other">
+    <h4>OTHER CONTROLS</h4>
+    <div class="l"><span>Travel fwd / rev</span><b><kbd>↑</kbd><kbd>↓</kbd></b></div>
+    <div class="l"><span>Spin left / right</span><b><kbd>←</kbd><kbd>→</kbd></b></div>
+    <div class="l"><span>Dozer raise / lower</span><b><kbd>R</kbd><kbd>F</kbd></b></div>
+    <div class="l"><span>Tracks wide / narrow</span><b><kbd>T</kbd><kbd>G</kbd></b></div>
+    <div class="l"><span>Throttle − / +</span><b><kbd>-</kbd><kbd>=</kbd></b></div>
+    <div class="l"><span>Travel speed hi/lo</span><b><kbd>V</kbd></b></div>
+    <div class="l"><span>Safety lock</span><b><kbd>X</kbd></b></div>
+    <div class="l"><span>Horn</span><b><kbd>Z</kbd></b></div>
+    <div class="l"><span>Reset machine</span><b><kbd>P</kbd></b></div>
+    <div class="l" style="border:none;"><span>Camera view</span><b><kbd>C</kbd></b></div>
+  </div>
+</div>
+
+<div id="viewtog">
+  <button id="vCockpit">FIRST-PERSON</button>
+  <button id="vOrbit" class="act">EXTERNAL</button>
+  <button id="vReset">RESET ⟳</button>
+</div>
+
+<div id="toast"></div>
+
+<div id="splash">
+  <div class="stripe"></div>
+  <div class="logo"><b>RIPPA R10</b> TRAINER</div>
+  <p>A faithful practice rig for the R10 mini-excavator controls — built from the operator's manual.
+     Learn the ISO joystick pattern, the dozer lever, travel levers &amp; pedals, throttle and starter sequence
+     before you climb onto the real machine.</p>
+  <p style="color:var(--safe);">Starts in <b>external view</b> — press <b>C</b> (or FIRST-PERSON) to climb into the seat. <b>Drag a lever to operate it</b>, or use the keyboard. Right-drag (or two-finger) looks around.</p>
+  <button id="startBtn">ENTER CAB</button>
+  <div class="credit">SIM ONLY · NOT A SUBSTITUTE FOR CERTIFIED TRAINING</div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+/* ============================================================
+   RIPPA R10 Mini-Excavator Control Trainer
+   Control scheme transcribed from the R10 operator's manual:
+   - Right joystick: fwd=boom down, back=boom up, left=bucket curl, right=bucket dump
+   - Left  joystick: fwd=stick out, back=stick in, left=swing left, right=swing right
+   - Hold boom-swing button: left/right reassigned to boom offset swing
+   - Two travel levers/pedals (differential), dozer lever, throttle, key switch, safety lock
+============================================================ */
+
+let scene, camera, renderer, clock;
+let view = 'orbit';
+const W = () => window.innerWidth, H = () => window.innerHeight;
+
+// ---- machine state ----
+const M = {
+  // joint angles (radians)
+  swing:0, offset:0, boom:0, stick:0, bucket:0, dozer:0,
+  // pose / travel
+  px:0, pz:0, heading:0, groundY:0, jack:0, dug:0,
+  // engine
+  key:0, keyMax:0, engineOn:false, rpm:0, throttle:0.0,
+  locked:true, speedHi:false, preheat:false, light:false,
+  stance:1, stanceTarget:1,   // 0 = tracks narrow (retracted), 1 = wide (expanded)
+  trackL:0, trackR:0,
+};
+// limits (rad)
+const LIM = {
+  boom:[-0.30, 0.95], stick:[-1.95, 0.55], bucket:[-2.0, 0.65],
+  offset:[-0.95,0.95], dozer:[-0.45,0.45]
+};
+// command rates (-1..1), spring-return except throttle
+const CMD = { boomY:0, bktX:0, stickY:0, swingX:0, dozer:0, travL:0, travR:0 };
+
+// ---- input ----
+const keys = {};
+let boomSwingMod = false;
+let HF = null;   // terrain heightfield
+
+/* =======================  3D MODEL  ======================= */
+let root, undercar, leftTrack, rightTrack, dozerGrp, house, boomSwing, boomGrp, stickGrp, bucketGrp;
+let boomCyl, stickCyl, bktCyl;
+let dozerBladeMesh=null;
+// cockpit controls (Object3D) and their pivots
+let ctl = {};
+let workLightA, workLightB;
+
+const MAT = {
+  body:    () => new THREE.MeshStandardMaterial({color:0x86CFE3, roughness:.5, metalness:.2}),   // RIPPA light blue
+  bodyDk:  () => new THREE.MeshStandardMaterial({color:0x3F9BB8, roughness:.55, metalness:.25}), // deeper teal trim
+  chassis: () => new THREE.MeshStandardMaterial({color:0x3a3a3a, roughness:.7, metalness:.4}),
+  dark:    () => new THREE.MeshStandardMaterial({color:0x1c1c1c, roughness:.85, metalness:.2}),
+  track:   () => new THREE.MeshStandardMaterial({color:0x141414, roughness:.95, metalness:.05}),
+  steel:   () => new THREE.MeshStandardMaterial({color:0x9aa0a6, roughness:.35, metalness:.85}),
+  hyd:     () => new THREE.MeshStandardMaterial({color:0xc7ccd1, roughness:.2, metalness:.95}),
+  seat:    () => new THREE.MeshStandardMaterial({color:0x222019, roughness:.9}),
+  glassblk:() => new THREE.MeshStandardMaterial({color:0x101010, roughness:.4, metalness:.6}),
+  red:     () => new THREE.MeshStandardMaterial({color:0xd23b2c, roughness:.5}),
+  knob:    () => new THREE.MeshStandardMaterial({color:0x121212, roughness:.6}),
+  amber:   () => new THREE.MeshStandardMaterial({color:0xf4b400, roughness:.5, emissive:0x000000}),
+};
+function box(w,h,d,mat,x=0,y=0,z=0){const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat);m.position.set(x,y,z);m.castShadow=true;m.receiveShadow=true;return m;}
+function cyl(rt,rb,h,mat,seg=18){const m=new THREE.Mesh(new THREE.CylinderGeometry(rt,rb,h,seg),mat);m.castShadow=true;m.receiveShadow=true;return m;}
+function sph(r,mat){const m=new THREE.Mesh(new THREE.SphereGeometry(r,16,12),mat);m.castShadow=true;return m;}
+// invisible but raycast-able grab zone, so small controls are easy to click/drag
+function grabZone(w,h,d,x=0,y=0,z=0){
+  const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),
+    new THREE.MeshBasicMaterial({transparent:true,opacity:0,depthWrite:false,depthTest:false}));
+  m.position.set(x,y,z); m.userData.pick=true; m.renderOrder=-1; return m;
+}
+
+function buildMachine(){
+  root = new THREE.Group();
+  scene.add(root);
+
+  /* ---------- UNDERCARRIAGE ---------- */
+  undercar = new THREE.Group(); root.add(undercar);
+  // tracks
+  function track(side){
+    const g = new THREE.Group();
+    const len=3.5, w=0.7, h=0.62;
+    const beltMat=MAT.track();
+    const belt=box(len,h,w,beltMat,0,h/2,0); g.add(belt);
+    // rounded ends
+    const e1=cyl(h/2,h/2,w,beltMat); e1.rotation.x=Math.PI/2; e1.position.set(len/2,h/2,0); g.add(e1);
+    const e2=cyl(h/2,h/2,w,beltMat); e2.rotation.x=Math.PI/2; e2.position.set(-len/2,h/2,0); g.add(e2);
+    // sprocket + idler
+    const sp=cyl(0.30,0.30,w+0.06,MAT.chassis(),12); sp.rotation.x=Math.PI/2; sp.position.set(-len/2,h/2,0); g.add(sp);
+    const id=cyl(0.26,0.26,w+0.04,MAT.chassis(),12); id.rotation.x=Math.PI/2; id.position.set(len/2,h/2,0); g.add(id);
+    g.position.set(0, 0, side*0.92);
+    return g;
+  }
+  leftTrack=track(1); rightTrack=track(-1);
+  undercar.add(leftTrack); undercar.add(rightTrack);
+  // car body deck linking tracks
+  undercar.add(box(2.7,0.42,1.4,MAT.chassis(),0,0.78,0));
+  undercar.add(box(2.2,0.18,1.7,MAT.chassis(),0,1.0,0));
+
+  // dozer blade at FRONT (+X) — small, like the real R10 (~track width, low profile)
+  dozerGrp=new THREE.Group(); dozerGrp.position.set(1.5,0.32,0); undercar.add(dozerGrp);
+  const arm1=box(0.7,0.09,0.10,MAT.chassis(),0.35,0,0.45); dozerGrp.add(arm1);
+  const arm2=box(0.7,0.09,0.10,MAT.chassis(),0.35,0,-0.45); dozerGrp.add(arm2);
+  const blade=box(0.14,0.34,1.85,MAT.body(),0.7,0.02,0); dozerGrp.add(blade); dozerBladeMesh=blade;
+  const bedge=box(0.07,0.12,1.85,MAT.dark(),0.74,-0.18,0); dozerGrp.add(bedge);
+
+  /* ---------- HOUSE (upper structure, swings) ---------- */
+  house=new THREE.Group(); house.position.set(0,1.12,0); root.add(house);
+  // counterweight rear
+  house.add(box(1.0,1.0,1.7,MAT.bodyDk(),-1.25,0.5,0));
+  // engine hood
+  house.add(box(1.6,0.9,1.85,MAT.body(),-0.55,0.5,0));
+  house.add(box(1.55,0.12,1.8,MAT.bodyDk(),-0.55,0.97,0)); // hood top trim
+  // main deck plate
+  house.add(box(2.9,0.14,1.95,MAT.chassis(),-0.2,0.02,0));
+  // operator floor
+  house.add(box(1.5,0.06,1.7,MAT.dark(),0.55,0.05,0));
+
+  buildCanopy(house);
+  buildSeatAndConsoles(house);
+
+  /* ---------- BOOM SWING (offset pivot at front of house) ---------- */
+  boomSwing=new THREE.Group(); boomSwing.position.set(1.15,0.18,0); house.add(boomSwing);
+  // king post
+  boomSwing.add(box(0.4,0.7,0.5,MAT.bodyDk(),0,0.35,0));
+
+  /* ---------- BOOM ---------- */
+  boomGrp=new THREE.Group(); boomGrp.position.set(0.1,0.45,0); boomSwing.add(boomGrp);
+  // curved boom: two segments
+  const b1=box(2.2,0.34,0.4,MAT.body(),1.05,0.05,0); b1.rotation.z=0.30; boomGrp.add(b1);
+  const knuck=new THREE.Group(); knuck.position.set(2.0,0.62,0); boomGrp.add(knuck);
+  const b2=box(2.0,0.32,0.38,MAT.body(),0.85,-0.3,0); b2.rotation.z=-0.55; knuck.add(b2);
+  // boom hydraulic cylinder (visual)
+  boomCyl=makeCylinder(0.9,MAT.hyd(),MAT.steel()); boomSwing.add(boomCyl.group);
+
+  /* ---------- STICK (arm) ---------- */
+  stickGrp=new THREE.Group(); stickGrp.position.set(1.55,-0.62,0); knuck.add(stickGrp);
+  const s1=box(1.9,0.26,0.30,MAT.body(),0.85,-0.05,0); s1.rotation.z=-0.12; stickGrp.add(s1);
+  stickCyl=makeCylinder(0.8,MAT.hyd(),MAT.steel()); knuck.add(stickCyl.group);
+
+  /* ---------- BUCKET ---------- */
+  bucketGrp=new THREE.Group(); bucketGrp.position.set(1.75,-0.28,0); stickGrp.add(bucketGrp);
+  const bk=box(0.45,0.6,0.78,MAT.bodyDk(),0.15,-0.28,0); bucketGrp.add(bk);
+  const bkFront=box(0.5,0.18,0.82,MAT.dark(),0.42,-0.5,0); bkFront.rotation.z=0.5; bucketGrp.add(bkFront);
+  const bkBack=box(0.16,0.55,0.8,MAT.bodyDk(),-0.06,-0.2,0); bucketGrp.add(bkBack);
+  // teeth
+  for(let i=-2;i<=2;i++){ const t=new THREE.Mesh(new THREE.ConeGeometry(0.05,0.22,6),MAT.steel());
+    t.rotation.z=-Math.PI/2+0.5; t.position.set(0.62,-0.58,i*0.15); t.castShadow=true; bucketGrp.add(t);}
+  bktCyl=makeCylinder(0.6,MAT.hyd(),MAT.steel()); stickGrp.add(bktCyl.group);
+
+  // initial pose
+  M.boom=0.4; M.stick=-0.8; M.bucket=-0.3; M.dozer=0;
+  applyPose();
+}
+
+// extensible hydraulic cylinder helper: a barrel + rod we re-aim each frame
+function makeCylinder(len, barrelMat, rodMat){
+  const group=new THREE.Group();
+  const barrel=cyl(0.07,0.07,len*0.6,barrelMat,12); barrel.rotation.z=Math.PI/2; barrel.position.x=len*0.3;
+  const rod=cyl(0.04,0.04,len*0.7,rodMat,10); rod.rotation.z=Math.PI/2; rod.position.x=len*0.65;
+  group.add(barrel); group.add(rod);
+  return {group, barrel, rod, len};
+}
+
+function buildCanopy(house){
+  const postMat=MAT.bodyDk();
+  const posts=[[0.05,-0.78],[0.05,0.78],[-1.0,-0.78],[-1.0,0.78]];
+  posts.forEach(([x,z])=>{ const p=cyl(0.07,0.07,2.4,postMat,8); p.position.set(x,1.3,z); house.add(p);});
+  // roof
+  const roof=box(1.9,0.12,2.0,MAT.body(),-0.45,2.55,0); house.add(roof);
+  house.add(box(2.0,0.05,2.1,MAT.bodyDk(),-0.45,2.62,0));
+  // work lights on roof front
+  workLightA=mkLamp(); workLightA.grp.position.set(0.55,2.45,0.7); house.add(workLightA.grp);
+  workLightB=mkLamp(); workLightB.grp.position.set(0.55,2.45,-0.7); house.add(workLightB.grp);
+}
+function mkLamp(){
+  const grp=new THREE.Group();
+  const body=cyl(0.1,0.1,0.12,MAT.dark(),10); body.rotation.x=Math.PI/2; grp.add(body);
+  const lens=cyl(0.11,0.11,0.04,new THREE.MeshStandardMaterial({color:0x222200,emissive:0x000000}),10);
+  lens.rotation.x=Math.PI/2; lens.position.x=0.08; grp.add(lens);
+  const light=new THREE.SpotLight(0xfff0c0,0,30,0.6,0.5); light.position.set(0,0,0);
+  const tgt=new THREE.Object3D(); tgt.position.set(6,-2,0); grp.add(tgt); light.target=tgt; grp.add(light);
+  return {grp,lens,light};
+}
+
+function buildSeatAndConsoles(house){
+  // -------- SEAT (operator faces +X / front) --------
+  const seat=new THREE.Group(); seat.position.set(0.2,0.32,0); house.add(seat);
+  seat.add(box(0.62,0.12,0.62,MAT.seat(),0,0.0,0));      // cushion
+  seat.add(box(0.12,0.62,0.62,MAT.seat(),-0.32,0.35,0)); // back
+  // -------- LEFT CONSOLE (operator's left = +Z) --------
+  const lc=new THREE.Group(); lc.position.set(0.45,0.30,0.62); house.add(lc);
+  lc.add(box(0.55,0.18,0.42,MAT.chassis(),0,0,0));
+  // safety lock lever (left front of left console) — pivots about Z; up=LOCKED
+  ctl.lock = mkLever(0.55, MAT.red(), MAT.knob());
+  ctl.lock.group.position.set(0.30,0.05,0.20); lc.add(ctl.lock.group);
+  ctl.lock.kind='lock';
+  // LEFT JOYSTICK
+  ctl.left = mkJoystick();
+  ctl.left.group.position.set(0.0,0.09,0.0); lc.add(ctl.left.group);
+  ctl.left.kind='left';
+  // -------- RIGHT CONSOLE (operator's right = -Z) --------
+  const rc=new THREE.Group(); rc.position.set(0.45,0.30,-0.62); house.add(rc);
+  rc.add(box(0.55,0.18,0.42,MAT.chassis(),0,0,0));
+  // RIGHT JOYSTICK
+  ctl.right = mkJoystick();
+  ctl.right.group.position.set(-0.02,0.09,0.0); rc.add(ctl.right.group);
+  ctl.right.kind='right';
+  // DOZER lever (right console, outboard front)
+  ctl.dozer = mkLever(0.6, MAT.amber(), MAT.knob());
+  ctl.dozer.group.position.set(0.24,0.05,-0.17); rc.add(ctl.dozer.group);
+  ctl.dozer.kind='dozer'; ctl.dozer.axis='x';
+  // THROTTLE knob/lever (right console rear)
+  ctl.throttle = mkLever(0.5, MAT.knob(), MAT.amber());
+  ctl.throttle.group.position.set(-0.22,0.05,-0.17); rc.add(ctl.throttle.group);
+  ctl.throttle.kind='throttle'; ctl.throttle.axis='x';
+  // KEY switch (small dash on right console front)
+  const dash=box(0.3,0.2,0.28,MAT.dark(),0.28,0.1,0.12); rc.add(dash);
+  ctl.key = mkKey(); ctl.key.group.position.set(0.40,0.18,0.12); rc.add(ctl.key.group);
+  ctl.key.kind='key';
+
+  // -------- TRAVEL LEVERS (two, center front) + PEDALS --------
+  const tv=new THREE.Group(); tv.position.set(0.95,0.18,0); house.add(tv);
+  tv.add(box(0.45,0.14,0.9,MAT.chassis(),0,0,0));
+  ctl.travL=mkLever(0.62,MAT.dark(),MAT.amber()); ctl.travL.group.position.set(0,0.05,0.22); tv.add(ctl.travL.group);
+  ctl.travL.kind='travel'; ctl.travL.axis='x'; ctl.travL.side='L';
+  ctl.travR=mkLever(0.62,MAT.dark(),MAT.amber()); ctl.travR.group.position.set(0,0.05,-0.22); tv.add(ctl.travR.group);
+  ctl.travR.kind='travel'; ctl.travR.axis='x'; ctl.travR.side='R';
+  // pedals at floor level in front of levers
+  ctl.pedL=mkPedal(); ctl.pedL.group.position.set(1.35,0.10,0.22); house.add(ctl.pedL.group); ctl.pedL.kind='pedal'; ctl.pedL.side='L';
+  ctl.pedR=mkPedal(); ctl.pedR.group.position.set(1.35,0.10,-0.22); house.add(ctl.pedR.group); ctl.pedR.kind='pedal'; ctl.pedR.side='R';
+}
+
+// joystick: base + shaft + ball + side button (boom swing)
+function mkJoystick(){
+  const group=new THREE.Group();
+  const base=cyl(0.13,0.16,0.08,MAT.dark(),16); base.position.y=0.04; group.add(base);
+  const pivot=new THREE.Group(); pivot.position.y=0.07; group.add(pivot);
+  const boot=cyl(0.07,0.11,0.12,new THREE.MeshStandardMaterial({color:0x111,roughness:1}),12); boot.position.y=0.06; pivot.add(boot);
+  const shaft=cyl(0.035,0.04,0.34,MAT.knob(),10); shaft.position.y=0.27; pivot.add(shaft);
+  const ball=sph(0.085,MAT.knob()); ball.position.y=0.46; pivot.add(ball);
+  const btn=box(0.04,0.04,0.05,MAT.amber(),0.07,0.44,0); pivot.add(btn);
+  // make the whole thing pickable: tag meshes
+  [base,boot,shaft,ball,btn].forEach(m=>m.userData.pick=true);
+  const gz=grabZone(0.34,0.85,0.34,0,0.4,0); group.add(gz);
+  return {group, pivot, ball, hit:[gz,base,boot,shaft,ball,btn]};
+}
+// generic single-axis lever
+function mkLever(len, shaftMat, knobMat){
+  const group=new THREE.Group();
+  const base=cyl(0.08,0.1,0.06,MAT.dark(),12); base.position.y=0.03; group.add(base);
+  const pivot=new THREE.Group(); pivot.position.y=0.05; group.add(pivot);
+  const shaft=cyl(0.03,0.035,len,shaftMat,10); shaft.position.y=len/2; pivot.add(shaft);
+  const knob=sph(0.06,knobMat); knob.position.y=len; pivot.add(knob);
+  [base,shaft,knob].forEach(m=>m.userData.pick=true);
+  const gz=grabZone(0.26,len+0.16,0.26,0,len*0.55,0); group.add(gz);
+  return {group, pivot, hit:[gz,base,shaft,knob]};
+}
+function mkKey(){
+  const group=new THREE.Group();
+  const barrel=cyl(0.05,0.05,0.07,MAT.steel(),12); barrel.rotation.x=Math.PI/2; group.add(barrel);
+  const pivot=new THREE.Group(); group.add(pivot);
+  const key=box(0.02,0.16,0.05,MAT.knob(),0,0.09,0); pivot.add(key);
+  const grip=box(0.02,0.06,0.1,MAT.dark(),0,0.18,0); pivot.add(grip);
+  [barrel,key,grip].forEach(m=>m.userData.pick=true);
+  const gz=grabZone(0.22,0.3,0.22,0,0.12,0); group.add(gz);
+  return {group,pivot,hit:[gz,barrel,key,grip]};
+}
+function mkPedal(){
+  const group=new THREE.Group();
+  const pivot=new THREE.Group(); group.add(pivot);
+  const plate=box(0.34,0.04,0.26,MAT.dark(),0.0,0,0); pivot.add(plate);
+  // ridges
+  for(let i=-2;i<=2;i++) pivot.add(box(0.04,0.05,0.24,MAT.knob(),i*0.07,0.02,0));
+  plate.userData.pick=true;
+  const gz=grabZone(0.42,0.22,0.34,0,0.08,0); group.add(gz);
+  return {group,pivot,hit:[gz,plate]};
+}
+
+/* =======================  POSE UPDATE  ======================= */
+function applyPose(){
+  house.rotation.y = M.swing;
+  boomSwing.rotation.y = M.offset;
+  boomGrp.rotation.z = M.boom;
+  stickGrp.rotation.z = M.stick;
+  bucketGrp.rotation.z = M.bucket;
+  dozerGrp.rotation.z = M.dozer;
+  // root transform (position + orientation) is owned entirely by physicsStep()
+  // tracks visual roll handled by texture-free; skip
+  aimCylinders();
+  // lever visuals
+  setLeverTilt(ctl.dozer, M.dozer/0.45*0.5);
+  setLeverTilt(ctl.throttle, (M.throttle-0.5)*0.9);
+  setLockVisual();
+  setKeyVisual();
+  // joystick visual = command
+  if(ctl.left)  setJoyTilt(ctl.left,  CMD.swingX, CMD.stickY);
+  if(ctl.right) setJoyTilt(ctl.right, CMD.bktX,  CMD.boomY);
+  setLeverTilt(ctl.travL, CMD.travL*0.6);
+  setLeverTilt(ctl.travR, CMD.travR*0.6);
+  setPedalTilt(ctl.pedL, CMD.travL);
+  setPedalTilt(ctl.pedR, CMD.travR);
+  // work light
+  const li = M.light && M.engineOn ? 2.2 : 0;
+  if(workLightA){ workLightA.light.intensity=li; workLightB.light.intensity=li;
+    const e = (M.light&&M.engineOn)?0x554400:0x000000;
+    workLightA.lens.material.emissive.setHex(e); workLightB.lens.material.emissive.setHex(e);}
+}
+function setJoyTilt(j,x,y){ // x: +right tilts toward -Z (operator right) ; y:+fwd tilts +X
+  j.pivot.rotation.z = -y*0.32;
+  j.pivot.rotation.x = x*0.32;
+}
+function setLeverTilt(l,t){ if(l) l.pivot.rotation.z=-t; }
+function setPedalTilt(p,t){ if(p) p.pivot.rotation.z=-t*0.25; }
+function setLockVisual(){ // locked = up (rotation 0), released = forward-down
+  if(ctl.lock) ctl.lock.pivot.rotation.z = M.locked ? 0 : -0.9;
+}
+function setKeyVisual(){ if(ctl.key) ctl.key.pivot.rotation.z = -M.key*0.5; }
+
+function aimCylinders(){
+  // boom cylinder: from boomSwing king-post to a point on boom
+  aimCyl(boomCyl, boomSwing, new THREE.Vector3(-0.15,0.25,0), boomGrp, new THREE.Vector3(1.6,0.25,0));
+  aimCyl(stickCyl, boomGrp.children[1], new THREE.Vector3(-0.1,0.5,0), stickGrp, new THREE.Vector3(0.6,0.15,0));
+  aimCyl(bktCyl, stickGrp, new THREE.Vector3(0.3,0.25,0), bucketGrp, new THREE.Vector3(-0.05,0.0,0));
+}
+const _a=new THREE.Vector3(), _b=new THREE.Vector3();
+function aimCyl(cobj, fromObj, fromLocal, toObj, toLocal){
+  if(!cobj) return;
+  fromObj.updateWorldMatrix(true,false); toObj.updateWorldMatrix(true,false);
+  _a.copy(fromLocal).applyMatrix4(fromObj.matrixWorld);
+  _b.copy(toLocal).applyMatrix4(toObj.matrixWorld);
+  // place cylinder group at _a (convert to parent space)
+  const parent=cobj.group.parent; parent.updateWorldMatrix(true,false);
+  const inv=new THREE.Matrix4().copy(parent.matrixWorld).invert();
+  const aL=_a.clone().applyMatrix4(inv), bL=_b.clone().applyMatrix4(inv);
+  cobj.group.position.copy(aL);
+  const dir=bL.clone().sub(aL); const dist=dir.length();
+  // orient: our cylinder extends along +X, so rotate group so +X points to bL
+  const q=new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(1,0,0), dir.clone().normalize());
+  cobj.group.quaternion.copy(q);
+  // scale rod to reach
+  const sx = dist / (cobj.len*0.95);
+  cobj.group.scale.x = Math.max(0.4, sx);
+}
+
+/* =======================  CAMERA  ======================= */
+const cam = { theta:-0.7, phi:0.95, dist:13 };   // external orbit
+const fpv = { yaw:0, pitch:-0.34 };              // first-person look offsets (house-local)
+const _eyeL=new THREE.Vector3(-0.05,1.46,0);     // seated eye, house-local
+function updateCamera(){
+  const wantFov = (view==='fpv') ? 86 : 55;
+  if(camera.fov !== wantFov){ camera.fov = wantFov; camera.updateProjectionMatrix(); }
+  if(view==='fpv'){
+    house.updateWorldMatrix(true,false);
+    const eye=_eyeL.clone().applyMatrix4(house.matrixWorld);
+    // look dir in house-local: x=front, y=up, z=operator-left
+    const cp=Math.cos(fpv.pitch);
+    const dir=new THREE.Vector3(cp*Math.cos(fpv.yaw), Math.sin(fpv.pitch), cp*Math.sin(fpv.yaw));
+    const dirW=dir.transformDirection(house.matrixWorld);
+    camera.position.copy(eye);
+    camera.lookAt(eye.clone().add(dirW));
+  } else {
+    const cx=M.px, cz=M.pz;
+    camera.position.set(
+      cx + cam.dist*Math.sin(cam.phi)*Math.cos(cam.theta),
+      cam.dist*Math.cos(cam.phi) + 1.0,
+      cz + cam.dist*Math.sin(cam.phi)*Math.sin(cam.theta));
+    camera.lookAt(cx,1.4,cz);
+  }
+}
+
+/* =======================  INPUT  ======================= */
+function setupInput(){
+  window.addEventListener('keydown', e=>{
+    const k=e.key.toLowerCase();
+    if(['arrowup','arrowdown','arrowleft','arrowright',' '].includes(k)) e.preventDefault();
+    if(keys[k]) return; keys[k]=true;
+    if(k==='b') boomSwingMod=true;
+    if(k==='x') toggleLock();
+    if(k==='v') toggleSpeed();
+    if(k==='t') M.stanceTarget=1;
+    if(k==='g') M.stanceTarget=0;
+    if(k==='z') horn();
+    if(k==='c') setView(view==='orbit'?'fpv':'orbit');
+    if(k==='p') resetMachine();
+    if(k==='1') setKey(1);
+    if(k==='2') setKey(2);
+    if(k==='0') setKey(0);
+    if(k==='='||k==='+') M.throttle=Math.min(1,M.throttle+0.12);
+    if(k==='-'||k==='_') M.throttle=Math.max(0,M.throttle-0.12);
+  });
+  window.addEventListener('keyup', e=>{ const k=e.key.toLowerCase(); keys[k]=false; if(k==='b') boomSwingMod=false; });
+
+  // mouse: orbit OR drag controls
+  const dom=renderer.domElement;
+  let dragOrbit=false, dragLook=false, lastX=0, lastY=0;
+  let dragCtl=null;
+  const ray=new THREE.Raycaster(), ndc=new THREE.Vector2();
+
+  function pick(ev){
+    const r=dom.getBoundingClientRect();
+    ndc.x=((ev.clientX-r.left)/r.width)*2-1;
+    ndc.y=-((ev.clientY-r.top)/r.height)*2+1;
+    ray.setFromCamera(ndc,camera);
+    // gather all hit meshes
+    const all=[];
+    Object.values(ctl).forEach(c=>{ if(c&&c.hit) c.hit.forEach(m=>{m.userData._ctl=c; all.push(m);}); });
+    const hits=ray.intersectObjects(all,false);
+    if(!hits.length) return null;
+    // discrete toggles (lock, key) take priority if the ray passes through them at all
+    for(const h of hits){ const c=h.object.userData._ctl; if(c && (c.kind==='lock'||c.kind==='key')) return c; }
+    return hits[0].object.userData._ctl;
+  }
+  dom.addEventListener('contextmenu', e=>e.preventDefault());
+  dom.addEventListener('pointerdown', ev=>{
+    // right button (or middle) = look / orbit, never operates a control
+    if(ev.button===2 || ev.button===1){
+      if(view==='orbit') dragOrbit=true; else dragLook=true;
+      lastX=ev.clientX; lastY=ev.clientY; dom.setPointerCapture(ev.pointerId); return;
+    }
+    const c=pick(ev);
+    if(c){ dragCtl=c; lastX=ev.clientX; lastY=ev.clientY;
+      if(c.kind==='key'){ cycleKey(); dragCtl=null; }
+      if(c.kind==='lock'){ toggleLock(); dragCtl=null; }
+      dom.setPointerCapture(ev.pointerId);
+    } else if(view==='orbit'){ dragOrbit=true; lastX=ev.clientX; lastY=ev.clientY; dom.setPointerCapture(ev.pointerId); }
+    else if(ev.pointerType==='touch'){ dragLook=true; lastX=ev.clientX; lastY=ev.clientY; dom.setPointerCapture(ev.pointerId); }
+    // (mouse left-click on empty space in first-person does nothing — no accidental camera spin)
+  });
+  dom.addEventListener('pointermove', ev=>{
+    if(dragOrbit){
+      cam.theta += (ev.clientX-lastX)*0.008;
+      cam.phi = Math.max(0.25, Math.min(1.45, cam.phi - (ev.clientY-lastY)*0.006));
+      lastX=ev.clientX; lastY=ev.clientY; return;
+    }
+    if(dragLook){
+      fpv.yaw   = Math.max(-1.5, Math.min(1.5, fpv.yaw - (ev.clientX-lastX)*0.004));
+      fpv.pitch = Math.max(-1.25, Math.min(0.45, fpv.pitch - (ev.clientY-lastY)*0.004));
+      lastX=ev.clientX; lastY=ev.clientY; return;
+    }
+    if(!dragCtl) return;
+    const dx=(ev.clientX-lastX)/90, dy=(ev.clientY-lastY)/90;
+    applyDrag(dragCtl,dx,dy);
+  });
+  function endDrag(ev){ if(dragCtl){ try{dom.releasePointerCapture(ev.pointerId);}catch(e){} } dragCtl=null; dragOrbit=false; dragLook=false; }
+  dom.addEventListener('pointerup', endDrag);
+  dom.addEventListener('pointercancel', endDrag);
+  dom.addEventListener('wheel', ev=>{ ev.preventDefault(); cam.dist=Math.max(6,Math.min(28,cam.dist+ev.deltaY*0.01)); }, {passive:false});
+}
+let dragHold={}; // continuous commands while dragging a control
+function applyDrag(c,dx,dy){
+  // dy negative = pushed forward (away) ; dx positive = right
+  const dz=v=>Math.abs(v)<0.22?0:v;   // deadzone: ignore small cross-axis drift
+  if(c.kind==='left'){ dragHold.stickY = clamp(dz(-dy),-1,1); dragHold.swingX = clamp(dz(dx),-1,1); }
+  else if(c.kind==='right'){ dragHold.boomY = clamp(dz(-dy),-1,1); dragHold.bktX = clamp(dz(dx),-1,1); }
+  else if(c.kind==='dozer'){ dragHold.dozer = clamp(-dy,-1,1); }
+  else if(c.kind==='throttle'){ M.throttle = clamp(M.throttle - dy*0.05,0,1); }
+  else if(c.kind==='travel'){ if(c.side==='L') dragHold.travL=clamp(-dy,-1,1); else dragHold.travR=clamp(-dy,-1,1); }
+  else if(c.kind==='pedal'){ if(c.side==='L') dragHold.travL=clamp(-dy,-1,1); else dragHold.travR=clamp(-dy,-1,1); }
+}
+function clamp(v,a,b){return Math.max(a,Math.min(b,v));}
+
+/* =======================  LOGIC  ======================= */
+function setKey(n){ // 0 off,1 contact,2 momentary start
+  if(n===2){ // start
+    if(M.key<1){ toast('Turn key to CONTACT first'); return; }
+    if(M.throttle<0.05){ /* allowed but hint */ }
+    M.key=2; M.keyMax=2;
+    setTimeout(()=>{ M.engineOn=true; M.key=1; updateKeyUI(); toast('Engine started'); honk(false); }, 700);
+  } else { M.key=n; if(n===0){ M.engineOn=false; } }
+  updateKeyUI();
+}
+function cycleKey(){ const n=(M.key+1)%3; setKey(n===2?2:n); }
+function updateKeyUI(){
+  document.getElementById('kOff').classList.toggle('act',M.key===0&&!M.engineOn);
+  document.getElementById('kOn').classList.toggle('act',M.key===1&&!M.engineOn||M.engineOn);
+  document.getElementById('kStart').classList.toggle('act',false);
+}
+function toggleLock(){ M.locked=!M.locked;
+  document.getElementById('sLock').textContent=M.locked?'LOCKED':'RELEASED';
+  document.getElementById('sLock').className='st '+(M.locked?'red':'grn');
+  document.getElementById('lampLock').classList.toggle('on',M.locked);
+  toast(M.locked?'Safety lock ENGAGED — hydraulics disabled':'Safety lock RELEASED — ready to operate');
+}
+function toggleSpeed(){ M.speedHi=!M.speedHi;
+  const s=document.getElementById('sSpeed'); s.textContent=M.speedHi?'RABBIT':'TURTLE'; s.className='st '+(M.speedHi?'on':''); }
+function horn(){ const s=document.getElementById('sHorn'); s.textContent='HONK'; s.className='st on'; honk(true);
+  setTimeout(()=>{s.textContent='—'; s.className='st';},400); }
+let actx;
+function honk(real){ try{ if(!actx) actx=new (window.AudioContext||window.webkitAudioContext)();
+  const o=actx.createOscillator(),g=actx.createGain(); o.type='square'; o.frequency.value=real?280:140;
+  o.connect(g); g.connect(actx.destination); g.gain.value=0.05; o.start();
+  setTimeout(()=>{o.stop();}, real?350:200);}catch(e){} }
+
+let toastT;
+function toast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show');
+  clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove('show'),1800); }
+
+function setView(v){ view=v;
+  document.getElementById('vOrbit').classList.toggle('act',v==='orbit');
+  document.getElementById('vCockpit').classList.toggle('act',v==='fpv'); }
+
+/* command gathering from keyboard + drag */
+function gatherCommands(){
+  // keyboard contributions
+  let boomY=0,bktX=0,stickY=0,swingX=0,offX=0,dozer=0,travL=0,travR=0;
+  if(keys['w']) boomY+=1; if(keys['s']) boomY-=1;      // fwd=boom down
+  if(keys['a']) bktX-=1; if(keys['d']) bktX+=1;
+  if(keys['i']) stickY+=1; if(keys['k']) stickY-=1;
+  if(boomSwingMod){ if(keys['j']) offX-=1; if(keys['l']) offX+=1; }
+  else { if(keys['j']) swingX-=1; if(keys['l']) swingX+=1; }
+  if(keys['r']) dozer+=1; if(keys['f']) dozer-=1;
+  if(keys['arrowup']){travL+=1;travR+=1;} if(keys['arrowdown']){travL-=1;travR-=1;}
+  if(keys['arrowleft']){travL-=1;travR+=1;} if(keys['arrowright']){travL+=1;travR-=1;}
+  // merge drag holds (drag overrides if non-zero this frame)
+  CMD.boomY = boomY || dragHold.boomY || 0;
+  CMD.bktX  = bktX  || dragHold.bktX  || 0;
+  CMD.stickY= stickY|| dragHold.stickY|| 0;
+  CMD.swingX= swingX|| (boomSwingMod?0:(dragHold.swingX||0));
+  CMD.offX  = offX || (boomSwingMod?(dragHold.swingX||0):0);
+  CMD.dozer = dozer || dragHold.dozer || 0;
+  CMD.travL = clamp(travL + (dragHold.travL||0),-1,1);
+  CMD.travR = clamp(travR + (dragHold.travR||0),-1,1);
+  // clear one-shot drag holds (spring return)
+  dragHold = {};
+}
+
+function step(dt){
+  gatherCommands();
+  // engine rpm
+  const target = M.engineOn ? (650 + M.throttle*1900) : 0;
+  M.rpm += (target - M.rpm) * Math.min(1, dt*3);
+  const hydOK = M.engineOn && !M.locked;
+  M.hydOK = hydOK;
+  const tf = 0.4 + M.throttle*0.9; // throttle factor on hyd speed
+  const rate = 0.85;
+
+  let drive=null;
+  if(hydOK){
+    M.boom  = clamp(M.boom  - CMD.boomY*rate*tf*dt, LIM.boom[0],LIM.boom[1]);   // fwd(+) -> boom down(-)
+    M.bucket= clamp(M.bucket+ CMD.bktX *rate*tf*dt, LIM.bucket[0],LIM.bucket[1]); // right(+) -> dump(+)
+    M.stick = clamp(M.stick - CMD.stickY*rate*tf*dt, LIM.stick[0],LIM.stick[1]);  // fwd(+) -> stick out(-)
+    M.swing += CMD.swingX*0.7*tf*dt;
+    M.offset= clamp(M.offset+ CMD.offX*0.6*tf*dt, LIM.offset[0],LIM.offset[1]);
+    M.dozer = clamp(M.dozer + CMD.dozer*0.7*tf*dt, LIM.dozer[0],LIM.dozer[1]); // lever back / R -> blade up
+    M.trackL=CMD.travL; M.trackR=CMD.travR;
+    drive={l:CMD.travL*tf, r:CMD.travR*tf};   // tracks feed the rigid-body sim
+  } else {
+    M.trackL=M.trackR=0;
+    if((Math.abs(CMD.boomY)+Math.abs(CMD.bktX)+Math.abs(CMD.stickY)+Math.abs(CMD.swingX)+Math.abs(CMD.travL)+Math.abs(CMD.travR))>0.1){
+      if(!M.engineOn) toast('Hydraulics inactive — start the engine');
+      else if(M.locked) toast('Controls locked — release the safety-lock lever (X)');
+    }
+  }
+  applyPose();
+  updateStance(dt);
+  physicsStep(dt, drive);
+  updateCamera();
+  updateHUD();
+}
+
+function updateHUD(){
+  document.getElementById('lampEng').classList.toggle('on',M.engineOn);
+  document.getElementById('lampHyd').classList.toggle('on',M.engineOn&&!M.locked);
+  document.getElementById('tEng').textContent=M.engineOn?'RUNNING':(M.key>=1?'CONTACT':'OFF');
+  document.getElementById('tRpm').textContent=Math.round(M.rpm);
+  document.getElementById('tThr').textContent=Math.round(M.throttle*100)+'%';
+  document.getElementById('barThr').style.width=(M.throttle*100)+'%';
+  document.getElementById('tSpd').textContent=M.speedHi?'RABBIT (HI)':'TURTLE (LO)';
+  document.getElementById('tDug').textContent=(M.dug*0.12).toFixed(1)+' m³';
+  const d=x=>Math.round(x*180/Math.PI);
+  document.getElementById('aBoom').textContent=d(M.boom)+'°';
+  document.getElementById('aStick').textContent=d(M.stick)+'°';
+  document.getElementById('aBkt').textContent=d(M.bucket)+'°';
+  document.getElementById('aSwing').textContent=((d(M.swing)%360+360)%360)+'°';
+  document.getElementById('aOff').textContent=d(M.offset)+'°';
+  document.getElementById('aDozer').textContent=d(M.dozer)+'°';
+  // checklist
+  ck('ck1',M.locked|| (!M.locked&&M.engineOn));
+  ck('ck2',M.throttle>0.3);
+  ck('ck3',M.key>=1||M.engineOn);
+  ck('ck4',M.engineOn);
+  ck('ck5',M.engineOn&&!M.locked);
+}
+function ck(id,done){ document.getElementById(id).classList.toggle('done',!!done);
+  const b=document.querySelector('#'+id+' .b'); b.textContent=done?'✓':''; }
+
+/* =======================  WIRE UI  ======================= */
+function wireUI(){
+  document.querySelectorAll('.keysw button').forEach(b=>b.onclick=()=>setKey(+b.dataset.k===2?2:+b.dataset.k));
+  document.getElementById('bLock').onclick=toggleLock;
+  document.getElementById('bSpeed').onclick=toggleSpeed;
+  document.getElementById('bStance').onclick=()=>{ M.stanceTarget = M.stanceTarget>0.5?0:1;
+    const s=document.getElementById('sStance'); s.textContent=M.stanceTarget>0.5?'WIDE':'NARROW'; s.className='st '+(M.stanceTarget>0.5?'on':''); };
+  document.getElementById('bHorn').onclick=horn;
+  document.getElementById('bPreheat').onclick=()=>{ M.preheat=!M.preheat;
+    const s=document.getElementById('sPre'); s.textContent=M.preheat?'GLOW':'OFF'; s.className='st '+(M.preheat?'on':''); };
+  document.getElementById('bLight').onclick=()=>{ M.light=!M.light;
+    const s=document.getElementById('sLight'); s.textContent=M.light?'ON':'OFF'; s.className='st '+(M.light?'on':''); };
+  document.getElementById('vOrbit').onclick=()=>setView('orbit');
+  document.getElementById('vCockpit').onclick=()=>setView('fpv');
+  document.getElementById('vReset').onclick=resetMachine;
+  document.getElementById('startBtn').onclick=()=>{ document.getElementById('splash').style.display='none';
+    if(!actx){try{actx=new(window.AudioContext||window.webkitAudioContext)();}catch(e){}} };
+}
+
+/* =======================  TERRAIN (heightfield)  ======================= */
+function sandTexture(){
+  const c=document.createElement('canvas'); c.width=c.height=256; const g=c.getContext('2d');
+  g.fillStyle='#9c8358'; g.fillRect(0,0,256,256);
+  const img=g.getImageData(0,0,256,256), d=img.data;
+  const cl=v=>v<0?0:v>255?255:v;
+  for(let i=0;i<d.length;i+=4){ const n=(Math.random()-0.5)*46; d[i]=cl(d[i]+n); d[i+1]=cl(d[i+1]+n*0.9); d[i+2]=cl(d[i+2]+n*0.7); }
+  g.putImageData(img,0,0);
+  for(let k=0;k<500;k++){ g.fillStyle='rgba(70,55,34,'+(0.08+Math.random()*0.28)+')';
+    g.beginPath(); g.arc(Math.random()*256,Math.random()*256,Math.random()*2.4,0,7); g.fill(); }
+  for(let k=0;k<200;k++){ g.fillStyle='rgba(210,190,150,'+(0.05+Math.random()*0.2)+')';
+    g.beginPath(); g.arc(Math.random()*256,Math.random()*256,Math.random()*1.6,0,7); g.fill(); }
+  const t=new THREE.CanvasTexture(c); t.wrapS=t.wrapT=THREE.RepeatWrapping; t.anisotropy=4; return t;
+}
+function makeHeightField(scene){
+  const N=80, span=72, cell=span/(N-1), x0=-span/2;
+  const data=new Float32Array(N*N);
+  const idx=(ix,iz)=>iz*N+ix;
+  // sand piles as gaussians
+  const piles=[];
+  for(let i=0;i<8;i++){ const a=Math.random()*6.28, rad=6+Math.random()*15;
+    piles.push({x:Math.cos(a)*rad, z:Math.sin(a)*rad, A:0.7+Math.random()*1.5, s:1.5+Math.random()*1.7}); }
+  for(let iz=0;iz<N;iz++)for(let ix=0;ix<N;ix++){
+    const x=x0+ix*cell, z=x0+iz*cell; let h=0;
+    for(const p of piles){ const dx=x-p.x,dz=z-p.z; h+=p.A*Math.exp(-(dx*dx+dz*dz)/(2*p.s*p.s)); }
+    // keep a flat clearing around the origin (spawn area)
+    const dc=Math.hypot(x,z);
+    if(dc<8){ const t=Math.max(0,(dc-5)/3); h*= t*t*(3-2*t); }   // smoothstep 5..8m
+    data[idx(ix,iz)]=h;
+  }
+  const geo=new THREE.BufferGeometry();
+  const pos=new Float32Array(N*N*3);
+  for(let iz=0;iz<N;iz++)for(let ix=0;ix<N;ix++){ const o=idx(ix,iz)*3;
+    pos[o]=x0+ix*cell; pos[o+1]=data[idx(ix,iz)]; pos[o+2]=x0+iz*cell; }
+  geo.setAttribute('position', new THREE.BufferAttribute(pos,3));
+  const uv=new Float32Array(N*N*2);
+  for(let iz=0;iz<N;iz++)for(let ix=0;ix<N;ix++){ const o=idx(ix,iz)*2; uv[o]=ix/(N-1); uv[o+1]=iz/(N-1); }
+  geo.setAttribute('uv', new THREE.BufferAttribute(uv,2));
+  const ind=[];
+  for(let iz=0;iz<N-1;iz++)for(let ix=0;ix<N-1;ix++){
+    const a=idx(ix,iz),b=idx(ix+1,iz),c=idx(ix,iz+1),d=idx(ix+1,iz+1); ind.push(a,c,b, b,c,d); }
+  geo.setIndex(ind); geo.computeVertexNormals();
+  const tex=sandTexture(); tex.repeat.set(span/2, span/2);
+  const mat=new THREE.MeshStandardMaterial({map:tex, color:0xffffff, roughness:1, metalness:0});
+  const mesh=new THREE.Mesh(geo,mat); mesh.receiveShadow=true; mesh.castShadow=true; scene.add(mesh);
+
+  function height(x,z){
+    const fx=(x-x0)/cell, fz=(z-x0)/cell;
+    if(fx<0||fz<0||fx>=N-1||fz>=N-1) return 0;
+    const ix=fx|0, iz=fz|0, tx=fx-ix, tz=fz-iz;
+    const h00=data[idx(ix,iz)],h10=data[idx(ix+1,iz)],h01=data[idx(ix,iz+1)],h11=data[idx(ix+1,iz+1)];
+    return (h00*(1-tx)+h10*tx)*(1-tz)+(h01*(1-tx)+h11*tx)*tz;
+  }
+  let dirty=false;
+  function lower(x,z,radius,targetY,dt){
+    const r=radius, maxDrop=2.6*dt; let moved=0;
+    const a=Math.max(0,Math.floor((x-r-x0)/cell)), b=Math.min(N-1,Math.ceil((x+r-x0)/cell));
+    const c=Math.max(0,Math.floor((z-r-x0)/cell)), d=Math.min(N-1,Math.ceil((z+r-x0)/cell));
+    const tgt=Math.max(0,targetY);
+    for(let iz=c;iz<=d;iz++)for(let ix=a;ix<=b;ix++){
+      const wx=x0+ix*cell, wz=x0+iz*cell, dx=wx-x, dz=wz-z, dist=Math.sqrt(dx*dx+dz*dz);
+      if(dist>r) continue;
+      const k=1-dist/r, i=idx(ix,iz), cur=data[i];
+      if(cur>tgt){ const drop=Math.min(cur-tgt, maxDrop*k); data[i]=cur-drop; moved+=drop; }
+    }
+    if(moved>0) dirty=true;
+    return moved;
+  }
+  function flush(){
+    if(!dirty) return; dirty=false;
+    const p=geo.attributes.position.array;
+    for(let iz=0;iz<N;iz++)for(let ix=0;ix<N;ix++) p[idx(ix,iz)*3+1]=data[idx(ix,iz)];
+    geo.attributes.position.needsUpdate=true; geo.computeVertexNormals();
+  }
+  return {N,span,cell,x0,height,lower,flush};
+}
+
+/* =======================  RIGID-BODY DYNAMICS  ======================= */
+/* The machine is simulated as a rigid body (mass, inertia, gravity) supported
+   by many ground-contact points. Pushing the bucket into solid ground creates a
+   reaction force at the tooth -> torque about the centre of mass -> the machine
+   pivots on its back/track edge (and will flip if you overdo it). */
+const _TIP=new THREE.Vector3(0.62,-0.58,0);     // bucket tooth tip (local to bucketGrp)
+const _DOZ=new THREE.Vector3(0.07,-0.17,0);     // dozer cutting edge (local to blade)
+const RB = {
+  p:new THREE.Vector3(0,0.4,0),  q:new THREE.Quaternion(),
+  v:new THREE.Vector3(),         w:new THREE.Vector3(),       // world ang. velocity
+  m:1050, Ib:new THREE.Vector3(), IbInv:new THREE.Vector3(),
+  com:new THREE.Vector3(-0.25,0.7,0),   // centre of mass, body-local (rear-biased, low)
+  rolled:false
+};
+(function initInertia(){
+  const L=3.4, Wd=2.0, Ht=1.9, m=RB.m;
+  RB.Ib.set( m/12*(Ht*Ht+Wd*Wd), m/12*(L*L+Wd*Wd), m/12*(L*L+Ht*Ht) );
+  RB.IbInv.set(1/RB.Ib.x, 1/RB.Ib.y, 1/RB.Ib.z);
+})();
+// contact points in body (root-local) space
+const TRACK_PTS=[]; for(const x of [-1.45,-0.7,0,0.7,1.45]) for(const s of [1,-1]){ const v=new THREE.Vector3(x,0,s*0.92); v._side=s; TRACK_PTS.push(v); }
+const HULL_PTS=[ // shell so it rests (not sinks) when tipped/rolled
+  new THREE.Vector3(1.05,2.55,0.85), new THREE.Vector3(1.05,2.55,-0.85),
+  new THREE.Vector3(-1.0,2.55,0.85), new THREE.Vector3(-1.0,2.55,-0.85),
+  new THREE.Vector3(-1.7,0.6,0.8),  new THREE.Vector3(-1.7,0.6,-0.8),
+  new THREE.Vector3(-1.7,1.5,0),
+  new THREE.Vector3(0.2,1.3,1.0),   new THREE.Vector3(0.2,1.3,-1.0),
+];
+let tipBody=null, dozBody=null, diggingNow=false;
+const _R=new THREE.Matrix4(), _qInv=new THREE.Quaternion(), _comW=new THREE.Vector3();
+const _cp=new THREE.Vector3(), _n=new THREE.Vector3(), _r=new THREE.Vector3(),
+      _vp=new THREE.Vector3(), _vt=new THREE.Vector3(), _F=new THREE.Vector3(),
+      _T=new THREE.Vector3(), _tmp=new THREE.Vector3(), _Ftot=new THREE.Vector3(),
+      _fdir=new THREE.Vector3(), _ldir=new THREE.Vector3(), _Xb=new THREE.Vector3();
+
+function terrainNormal(x,z,out){
+  const e=0.5;
+  const hx=HF.height(x+e,z)-HF.height(x-e,z);
+  const hz=HF.height(x,z+e)-HF.height(x,z-e);
+  return out.set(-hx/(2*e),1,-hz/(2*e)).normalize();
+}
+
+function physSub(h, drive){
+  _comW.copy(RB.com).applyQuaternion(RB.q).add(RB.p);   // CoM in world
+  _F.set(0,-RB.m*9.81,0); _T.set(0,0,0);                 // start with gravity at CoM
+  _qInv.copy(RB.q).invert();
+  let grounded=false;
+  const powered = !!drive && M.hydOK;
+  const maxsp = (M.speedHi?2.8:1.5);
+  _Xb.set(1,0,0).applyQuaternion(RB.q);                 // machine forward in world
+
+  // generic contact (hull / bucket tooth / dozer edge): isotropic friction
+  function contact(bp, type){
+    _cp.copy(bp).applyQuaternion(RB.q).add(RB.p);
+    const gh=HF.height(_cp.x,_cp.z); const d=gh-_cp.y;
+    if(d<=0) return false;
+    terrainNormal(_cp.x,_cp.z,_n);
+    _r.copy(_cp).sub(_comW);
+    _vp.copy(RB.w).cross(_r).add(RB.v);
+    const vn=_vp.dot(_n);
+    let kN=70000, cN=5200, cap=1e9;
+    if(type==='bucket' && gh>0.06 && diggingNow){ M.dug += HF.lower(_cp.x,_cp.z,0.75,_cp.y,h); kN=2600; cN=700; }
+    if(type==='bucket' || type==='dozer') cap=90000;
+    let Fn=kN*d - cN*vn; if(Fn<0) Fn=0; if(Fn>cap) Fn=cap;
+    _Ftot.copy(_n).multiplyScalar(Fn);
+    _vt.copy(_vp).addScaledVector(_n,-vn);
+    const vtm=_vt.length();
+    if(vtm>1e-4){ const ft=Math.min(0.9*Fn, 5000*vtm); _Ftot.addScaledVector(_vt, -ft/vtm); }
+    _F.add(_Ftot); _T.add(_tmp.copy(_r).cross(_Ftot));
+    return true;
+  }
+
+  // TRACK contact: split tangential into drive (along track) and lateral (grip).
+  // This is what actually moves the machine — the old global friction was cancelling it.
+  function trackContact(bp){
+    _cp.copy(bp).applyQuaternion(RB.q).add(RB.p);
+    const gh=HF.height(_cp.x,_cp.z); const d=gh-_cp.y;
+    if(d<=0) return false;
+    terrainNormal(_cp.x,_cp.z,_n);
+    _r.copy(_cp).sub(_comW);
+    _vp.copy(RB.w).cross(_r).add(RB.v);
+    const vn=_vp.dot(_n);
+    let Fn=70000*d - 5200*vn; if(Fn<0) Fn=0;
+    _Ftot.copy(_n).multiplyScalar(Fn);
+    // track-forward & lateral directions on the ground plane
+    _fdir.copy(_Xb).addScaledVector(_n, -_Xb.dot(_n)); if(_fdir.lengthSq()>1e-6) _fdir.normalize();
+    _ldir.crossVectors(_n,_fdir).normalize();
+    _vt.copy(_vp).addScaledVector(_n,-vn);
+    const vf=_vt.dot(_fdir), vl=_vt.dot(_ldir);
+    const desF = powered ? ((bp._side>0?drive.l:drive.r)*maxsp) : 0;     // per-track speed
+    let Ff = powered ? 5500*(desF - vf) : -3500*vf;   // drive toward target / brake
+    let Fl = -8000*vl;                                 // lateral grip (no side-slip)
+    const maxT=0.95*Fn, tm=Math.hypot(Ff,Fl);          // traction-circle limit
+    if(tm>maxT){ const s=maxT/tm; Ff*=s; Fl*=s; }
+    _Ftot.addScaledVector(_fdir, Ff).addScaledVector(_ldir, Fl);
+    _F.add(_Ftot); _T.add(_tmp.copy(_r).cross(_Ftot));
+    return true;
+  }
+
+  for(const p of TRACK_PTS) if(trackContact(p)) grounded=true;
+  for(const p of HULL_PTS)  contact(p,'hull');
+  if(tipBody) contact(tipBody,'bucket');
+  if(dozBody) contact(dozBody,'dozer');
+
+  // integrate linear
+  RB.v.addScaledVector(_F, h/RB.m);
+  // integrate angular: a = R*(IbInv .* (R^-1 * T))
+  _tmp.copy(_T).applyQuaternion(_qInv);
+  _tmp.set(_tmp.x*RB.IbInv.x, _tmp.y*RB.IbInv.y, _tmp.z*RB.IbInv.z).applyQuaternion(RB.q);
+  RB.w.addScaledVector(_tmp, h);
+  // damping (settles jitter without killing real motion)
+  RB.v.multiplyScalar(1-Math.min(0.3,0.35*h));
+  RB.w.multiplyScalar(1-Math.min(0.35,0.8*h));
+  // integrate pose
+  RB.p.addScaledVector(RB.v, h);
+  const wq=new THREE.Quaternion(RB.w.x*h*0.5, RB.w.y*h*0.5, RB.w.z*h*0.5, 0).multiply(RB.q);
+  RB.q.set(RB.q.x+wq.x, RB.q.y+wq.y, RB.q.z+wq.z, RB.q.w+wq.w).normalize();
+  return grounded;
+}
+
+function physicsStep(dt, drive){
+  if(!HF){ return; }
+  // refresh body-local positions of the (articulated) tooth + dozer edge for this frame
+  root.position.copy(RB.p); root.quaternion.copy(RB.q); root.updateMatrixWorld(true);
+  tipBody = root.worldToLocal(bucketGrp.localToWorld(_TIP.clone()));
+  if(dozerBladeMesh) dozBody = root.worldToLocal(dozerBladeMesh.localToWorld(_DOZ.clone()));
+  // dynamic CoM: the boom+stick+bucket are heavy and swing the balance around.
+  // Blend the chassis CoM (rear, low) with the arm's mass centre (~halfway out to the tooth).
+  {
+    const wArm=0.34, bx=1.2, by=1.3;                 // boom-base reference (body-local)
+    const ax=bx+0.6*(tipBody.x-bx), ay=by+0.6*(tipBody.y-by), az=0.6*tipBody.z;
+    RB.com.set(-0.25*(1-wArm)+ax*wArm, 0.66*(1-wArm)+ay*wArm, az*wArm);
+  }
+  diggingNow = M.hydOK && ((CMD.bktX<-0.15)||(CMD.stickY<-0.15)||(CMD.boomY>0.35));
+
+  const n=6, h=Math.min(0.02, dt)/n;
+  for(let i=0;i<n;i++) physSub(h, drive);
+  HF.flush();
+
+  root.position.copy(RB.p); root.quaternion.copy(RB.q);
+  // expose pose for camera / HUD
+  M.px=RB.p.x; M.pz=RB.p.z;
+  _tmp.set(1,0,0).applyQuaternion(RB.q); M.heading=Math.atan2(-_tmp.z,_tmp.x);
+  _tmp.set(0,1,0).applyQuaternion(RB.q);
+  const rolledNow=_tmp.y<0.25;
+  if(rolledNow && !RB.rolled) toast('⚠ Machine tipped over — press P (or Reset) to recover');
+  RB.rolled=rolledNow;
+}
+function resetMachine(){
+  RB.p.set(0,0.5,0); RB.q.identity(); RB.v.set(0,0,0); RB.w.set(0,0,0); RB.rolled=false;
+  M.jack=0; toast('Machine reset');
+}
+function updateStance(dt){
+  M.stance += (M.stanceTarget - M.stance)*Math.min(1, dt*2.5);
+  const half = 0.66 + M.stance*0.46;      // narrow 0.66  ->  wide 1.12
+  if(leftTrack)  leftTrack.position.z  =  half;
+  if(rightTrack) rightTrack.position.z = -half;
+  for(const p of TRACK_PTS) p.z = p._side*half;
+}
+
+
+/* =======================  SCENE / LOOP  ======================= */
+function init(){
+  scene=new THREE.Scene();
+  scene.background=new THREE.Color(0x171510);
+  scene.fog=new THREE.Fog(0x171510, 28, 70);
+  camera=new THREE.PerspectiveCamera(55,W()/H(),0.1,300);
+  renderer=new THREE.WebGLRenderer({antialias:true});
+  renderer.setSize(W(),H()); renderer.setPixelRatio(Math.min(2,devicePixelRatio));
+  renderer.shadowMap.enabled=true; renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+  document.getElementById('app').appendChild(renderer.domElement);
+  clock=new THREE.Clock();
+
+  // lights
+  const hemi=new THREE.HemisphereLight(0xcfd8ff,0x3a3020,0.6); scene.add(hemi);
+  const sun=new THREE.DirectionalLight(0xfff3df,1.25); sun.position.set(14,22,8);
+  sun.castShadow=true; sun.shadow.mapSize.set(2048,2048);
+  const s=22; sun.shadow.camera.left=-s; sun.shadow.camera.right=s; sun.shadow.camera.top=s; sun.shadow.camera.bottom=-s;
+  sun.shadow.camera.far=70; sun.shadow.bias=-0.0004; scene.add(sun);
+  scene.add(new THREE.DirectionalLight(0x8899bb,0.25).translateZ(-10));
+
+  // ground (far field, flat) — heightfield baseline sits at y=0 to match
+  const gtex=sandTexture(); gtex.repeat.set(130,130);
+  const gmat=new THREE.MeshStandardMaterial({map:gtex, color:0xe8dcc0, roughness:1});
+  const ground=new THREE.Mesh(new THREE.PlaneGeometry(260,260),gmat);
+  ground.rotation.x=-Math.PI/2; ground.position.y=-0.01; ground.receiveShadow=true; scene.add(ground);
+
+  // diggable terrain heightfield with sand piles
+  HF = makeHeightField(scene);
+
+  // scattered rocks — static reference points so motion over the sand is obvious
+  for(let i=0;i<16;i++){ const a=Math.random()*6.28, rad=9+Math.random()*22, x=Math.cos(a)*rad, z=Math.sin(a)*rad;
+    const r=0.18+Math.random()*0.34;
+    const rk=new THREE.Mesh(new THREE.DodecahedronGeometry(r,0),
+      new THREE.MeshStandardMaterial({color:0x6f655a, roughness:1, flatShading:true}));
+    rk.position.set(x, HF.height(x,z)+r*0.5, z);
+    rk.rotation.set(Math.random()*3,Math.random()*3,Math.random()*3);
+    rk.castShadow=true; rk.receiveShadow=true; scene.add(rk); }
+
+  buildMachine();
+  setupInput(); wireUI();
+  updateKeyUI();
+  window.addEventListener('resize',()=>{ camera.aspect=W()/H(); camera.updateProjectionMatrix(); renderer.setSize(W(),H()); });
+  loop();
+}
+function loop(){
+  requestAnimationFrame(loop);
+  const dt=Math.min(0.05, clock.getDelta());
+  step(dt);
+  renderer.render(scene,camera);
+}
+init();
+</script>
+</body>
+</html>
