@@ -15,7 +15,7 @@
   *{box-sizing:border-box; margin:0; padding:0;}
   html,body{height:100%; overflow:hidden; background:var(--bg);
     color:var(--txt); font-family:'IBM Plex Mono',monospace; -webkit-user-select:none; user-select:none;}
-  #app{position:fixed; inset:0;}
+  #app{position:fixed; left:0; right:0; top:0; height:100%;}
   canvas{display:block;}
 
   /* ---- Top bar ---- */
@@ -140,6 +140,53 @@
   .credit{font-size:10px; color:#5c5847; letter-spacing:1px;}
   @media (max-width:1100px){ #legend .other{display:none;} }
   @media (max-width:820px){ #telemetry,#checklist{display:none;} }
+  /* ================= MOBILE ================= */
+  #mdeck{display:none;}
+  body.mobile #telemetry, body.mobile #switches, body.mobile #legend,
+  body.mobile #checklist, body.mobile #viewtog{display:none !important;}
+  body.mobile #app{ top:52px; bottom:auto; }
+  body.mobile #mdeck{
+    display:flex; flex-direction:column; position:fixed; left:0; right:0; bottom:0; z-index:18;
+    background:linear-gradient(180deg,#1b1a13,#100f0a); border-top:2px solid var(--line);
+    padding:7px 7px calc(7px + env(safe-area-inset-bottom)); gap:7px; touch-action:none;
+  }
+  .mchips{display:flex; gap:6px; overflow-x:auto; -webkit-overflow-scrolling:touch; padding-bottom:1px; touch-action:pan-x;}
+  .mchip{flex:0 0 auto; background:var(--panel2); border:1px solid var(--line); color:var(--txt);
+    font-family:'Oxanium',sans-serif; font-weight:700; font-size:11px; letter-spacing:.5px;
+    padding:8px 11px; border-radius:8px; white-space:nowrap; touch-action:manipulation;}
+  .mchip.on{background:var(--amber); color:#000; border-color:var(--amber);}
+  .mchip.red{background:var(--red); color:#000; border-color:var(--red);}
+  .mchip.grn{background:var(--green); color:#000; border-color:var(--green);}
+  .mthr{display:flex; align-items:center; gap:8px; font-family:'Oxanium',sans-serif; font-size:10px;
+    letter-spacing:1px; color:var(--dim);}
+  .mthr input{flex:1; height:26px; accent-color:var(--amber);}
+  .mmain{flex:1; display:flex; align-items:stretch; gap:8px; min-height:150px;}
+  .mpadwrap{flex:1 1 0; display:flex; flex-direction:column; align-items:center; gap:4px; min-width:0;}
+  .mpadlabel{font-family:'Oxanium',sans-serif; font-size:9px; letter-spacing:1.5px; color:var(--amber);}
+  .mpad{position:relative; flex:1; aspect-ratio:1/1; max-height:190px; align-self:center;
+    width:auto; background:radial-gradient(circle at 50% 50%,#26241b,#15140f);
+    border:2px solid var(--line); border-radius:50%; touch-action:none; overflow:hidden;}
+  .mpad::before, .mpad::after{content:''; position:absolute; background:#2f2c20;}
+  .mpad::before{left:8%; right:8%; top:calc(50% - 1px); height:2px;}
+  .mpad::after{top:8%; bottom:8%; left:calc(50% - 1px); width:2px;}
+  .mknob{position:absolute; width:42%; height:42%; left:29%; top:29%;
+    background:radial-gradient(circle at 38% 32%,#3a3730,#111); border:2px solid #4a4636;
+    border-radius:50%; box-shadow:0 3px 8px rgba(0,0,0,.6); pointer-events:none;}
+  .mcenter{flex:0 0 86px; display:flex; flex-direction:column; gap:6px;}
+  .mdoz{display:flex; flex-direction:column; gap:5px;}
+  .mbtn{background:var(--panel2); border:1px solid var(--line); color:var(--txt);
+    font-family:'Oxanium',sans-serif; font-weight:700; font-size:10px; letter-spacing:.5px;
+    padding:9px 4px; border-radius:8px; touch-action:none;}
+  .mbtn.on{background:var(--amber); color:#000;}
+  .mtravel{flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px;}
+  .mtrow{display:flex; gap:4px;}
+  .mtbtn{width:38px; height:34px; background:var(--panel2); border:1px solid var(--line); color:var(--safe);
+    border-radius:8px; font-size:14px; touch-action:none; display:flex; align-items:center; justify-content:center;}
+  .mtbtn.on{background:var(--amber); color:#000;}
+  .mtlabel{font-family:'Oxanium',sans-serif; font-size:8px; letter-spacing:1px; color:var(--dim);}
+  /* mobile splash sizing */
+  body.mobile #splash .logo{font-size:30px;}
+  body.mobile #splash p{font-size:12px; padding:0 18px;}
 </style>
 </head>
 <body>
@@ -187,7 +234,7 @@
   <button class="btn" id="bLock">SAFETY LOCK LEVER <span class="st red" id="sLock">LOCKED</span></button>
   <button class="btn" id="bSpeed">TRAVEL SPEED <span class="st" id="sSpeed">TURTLE</span></button>
   <button class="btn" id="bStance">TRACK STANCE <span class="st on" id="sStance">WIDE</span></button>
-  <button class="btn" id="bPreheat">PREHEAT (GLOW) <span class="st" id="sPre">OFF</span></button>
+  <button class="btn" id="bThumb">HYDRAULIC THUMB <span class="st" id="sThumb">OPEN</span></button>
   <button class="btn" id="bLight">WORK LIGHT <span class="st" id="sLight">OFF</span></button>
   <button class="btn" id="bHorn">HORN <span class="st" id="sHorn">—</span></button>
   <div class="hint">Faithful to manual: hydraulics work only with the <b>engine running</b> and the <b>safety-lock lever released</b>. Lock the lever before mounting / dismounting.</div>
@@ -239,6 +286,7 @@
     <div class="l"><span>Spin left / right</span><b><kbd>←</kbd><kbd>→</kbd></b></div>
     <div class="l"><span>Dozer raise / lower</span><b><kbd>R</kbd><kbd>F</kbd></b></div>
     <div class="l"><span>Tracks wide / narrow</span><b><kbd>T</kbd><kbd>G</kbd></b></div>
+    <div class="l"><span>Thumb open / close</span><b><kbd>N</kbd></b></div>
     <div class="l"><span>Throttle − / +</span><b><kbd>-</kbd><kbd>=</kbd></b></div>
     <div class="l"><span>Travel speed hi/lo</span><b><kbd>V</kbd></b></div>
     <div class="l"><span>Safety lock</span><b><kbd>X</kbd></b></div>
@@ -252,6 +300,42 @@
   <button id="vCockpit">FIRST-PERSON</button>
   <button id="vOrbit" class="act">EXTERNAL</button>
   <button id="vReset">RESET ⟳</button>
+</div>
+
+<div id="mdeck">
+  <div class="mchips">
+    <button class="mchip" id="mKey">START ENGINE</button>
+    <button class="mchip red" id="mLock">LOCK: ON</button>
+    <button class="mchip" id="mSpeed">TURTLE</button>
+    <button class="mchip on" id="mStance">TRACKS WIDE</button>
+    <button class="mchip" id="mThumb">THUMB: OPEN</button>
+    <button class="mchip" id="mView">VIEW: EXT</button>
+    <button class="mchip" id="mHorn">HORN</button>
+    <button class="mchip" id="mReset">RESET</button>
+  </div>
+  <div class="mthr"><span>THROTTLE</span><input type="range" id="mThr" min="0" max="100" value="0"><span id="mThrV" style="width:34px;text-align:right;color:var(--amber)">0%</span></div>
+  <div class="mmain">
+    <div class="mpadwrap">
+      <div class="mpadlabel">ARM · SWING</div>
+      <div class="mpad" id="mLeft"><div class="mknob" id="mLeftK"></div></div>
+    </div>
+    <div class="mcenter">
+      <div class="mdoz">
+        <button class="mbtn" id="mDozUp">BLADE ▲</button>
+        <button class="mbtn" id="mDozDn">BLADE ▼</button>
+      </div>
+      <div class="mtravel">
+        <div class="mtlabel">TRAVEL</div>
+        <button class="mtbtn" id="mTf">▲</button>
+        <div class="mtrow"><button class="mtbtn" id="mTl">◀</button><button class="mtbtn" id="mTr">▶</button></div>
+        <button class="mtbtn" id="mTb">▼</button>
+      </div>
+    </div>
+    <div class="mpadwrap">
+      <div class="mpadlabel">BOOM · BUCKET</div>
+      <div class="mpad" id="mRight"><div class="mknob" id="mRightK"></div></div>
+    </div>
+  </div>
 </div>
 
 <div id="toast"></div>
@@ -285,7 +369,7 @@ const W = () => window.innerWidth, H = () => window.innerHeight;
 // ---- machine state ----
 const M = {
   // joint angles (radians)
-  swing:0, offset:0, boom:0, stick:0, bucket:0, dozer:0,
+  swing:0, offset:0, boom:0, stick:0, bucket:0, dozer:0, thumb:0, thumbTarget:0,
   // pose / travel
   px:0, pz:0, heading:0, groundY:0, jack:0, dug:0,
   // engine
@@ -306,11 +390,15 @@ const CMD = { boomY:0, bktX:0, stickY:0, swingX:0, dozer:0, travL:0, travR:0 };
 const keys = {};
 let boomSwingMod = false;
 let HF = null;   // terrain heightfield
+let IS_MOBILE = false;
+const VJ = { lx:0, ly:0, rx:0, ry:0, tf:0, tt:0, doz:0 };  // on-screen touch controls
 
 /* =======================  3D MODEL  ======================= */
 let root, undercar, leftTrack, rightTrack, dozerGrp, house, boomSwing, boomGrp, stickGrp, bucketGrp;
 let boomCyl, stickCyl, bktCyl;
 let dozerBladeMesh=null;
+let thumbGrp=null, thumbCyl=null;
+let ROCKS=[], COLLIDERS=[];
 // cockpit controls (Object3D) and their pivots
 let ctl = {};
 let workLightA, workLightB;
@@ -409,16 +497,29 @@ function buildMachine(){
 
   /* ---------- BUCKET ---------- */
   bucketGrp=new THREE.Group(); bucketGrp.position.set(1.75,-0.28,0); stickGrp.add(bucketGrp);
-  const bk=box(0.45,0.6,0.78,MAT.bodyDk(),0.15,-0.28,0); bucketGrp.add(bk);
-  const bkFront=box(0.5,0.18,0.82,MAT.dark(),0.42,-0.5,0); bkFront.rotation.z=0.5; bucketGrp.add(bkFront);
-  const bkBack=box(0.16,0.55,0.8,MAT.bodyDk(),-0.06,-0.2,0); bucketGrp.add(bkBack);
-  // teeth
-  for(let i=-2;i<=2;i++){ const t=new THREE.Mesh(new THREE.ConeGeometry(0.05,0.22,6),MAT.steel());
-    t.rotation.z=-Math.PI/2+0.5; t.position.set(0.62,-0.58,i*0.15); t.castShadow=true; bucketGrp.add(t);}
+  const bMat=MAT.body(), bDk=MAT.bodyDk();
+  // scoop OPENS DOWNWARD: closed top, walls drop to a toothed cutting edge at the bottom
+  bucketGrp.add(box(0.72,0.12,0.8, bMat,  0.32,-0.02,0));       // top (closed face)
+  bucketGrp.add(box(0.12,0.55,0.8, bDk,  -0.02,-0.28,0));       // back wall (at pivot)
+  const fr=box(0.12,0.5,0.8, bMat, 0.64,-0.3,0); fr.rotation.z=0.22; bucketGrp.add(fr); // front wall
+  bucketGrp.add(box(0.72,0.5,0.06, bDk,  0.32,-0.3, 0.41));     // side wall L
+  bucketGrp.add(box(0.72,0.5,0.06, bDk,  0.32,-0.3,-0.41));     // side wall R
+  // teeth at the BOTTOM cutting edge, pointing DOWN
+  for(let i=-2;i<=2;i++){ const t=new THREE.Mesh(new THREE.ConeGeometry(0.055,0.22,6),MAT.steel());
+    t.rotation.x=Math.PI; t.position.set(0.5,-0.6,i*0.16); t.castShadow=true; bucketGrp.add(t);}
   bktCyl=makeCylinder(0.6,MAT.hyd(),MAT.steel()); stickGrp.add(bktCyl.group);
 
+  // ---- Hydraulic thumb — mounted BELOW the bucket, folds UP to clamp into the down-facing scoop ----
+  thumbGrp=new THREE.Group(); thumbGrp.position.set(1.5,-0.9,0); stickGrp.add(thumbGrp);
+  thumbGrp.add(box(0.95,0.09,0.06, MAT.bodyDk(), 0.47,0, 0.2));  // side link L
+  thumbGrp.add(box(0.95,0.09,0.06, MAT.bodyDk(), 0.47,0,-0.2));  // side link R
+  thumbGrp.add(box(0.1,0.13,0.5, MAT.dark(), 0.95,0,0));         // knuckle
+  for(let i=-1;i<=1;i++){ const tine=box(0.32,0.06,0.07, MAT.steel(), 1.12,0.1,i*0.19);
+    tine.rotation.z=0.7; thumbGrp.add(tine); }                   // teeth curl UP toward the bucket
+  const tCyl=makeCylinder(0.5,MAT.hyd(),MAT.steel()); stickGrp.add(tCyl.group); thumbCyl=tCyl;
+
   // initial pose
-  M.boom=0.4; M.stick=-0.8; M.bucket=-0.3; M.dozer=0;
+  M.boom=0.4; M.stick=-0.8; M.bucket=-0.3; M.dozer=0; M.thumb=0;
   applyPose();
 }
 
@@ -553,6 +654,7 @@ function applyPose(){
   boomGrp.rotation.z = M.boom;
   stickGrp.rotation.z = M.stick;
   bucketGrp.rotation.z = M.bucket;
+  if(thumbGrp) thumbGrp.rotation.z = -3.0 + 2.95*M.thumb;   // open(0): stowed back under the stick ; closed(1): up into bucket
   dozerGrp.rotation.z = M.dozer;
   // root transform (position + orientation) is owned entirely by physicsStep()
   // tracks visual roll handled by texture-free; skip
@@ -570,9 +672,9 @@ function applyPose(){
   setPedalTilt(ctl.pedL, CMD.travL);
   setPedalTilt(ctl.pedR, CMD.travR);
   // work light
-  const li = M.light && M.engineOn ? 2.2 : 0;
+  const li = M.light ? 1.1 : 0;
   if(workLightA){ workLightA.light.intensity=li; workLightB.light.intensity=li;
-    const e = (M.light&&M.engineOn)?0x554400:0x000000;
+    const e = M.light?0xffcc66:0x000000;
     workLightA.lens.material.emissive.setHex(e); workLightB.lens.material.emissive.setHex(e);}
 }
 function setJoyTilt(j,x,y){ // x: +right tilts toward -Z (operator right) ; y:+fwd tilts +X
@@ -591,6 +693,7 @@ function aimCylinders(){
   aimCyl(boomCyl, boomSwing, new THREE.Vector3(-0.15,0.25,0), boomGrp, new THREE.Vector3(1.6,0.25,0));
   aimCyl(stickCyl, boomGrp.children[1], new THREE.Vector3(-0.1,0.5,0), stickGrp, new THREE.Vector3(0.6,0.15,0));
   aimCyl(bktCyl, stickGrp, new THREE.Vector3(0.3,0.25,0), bucketGrp, new THREE.Vector3(-0.05,0.0,0));
+  if(thumbCyl) aimCyl(thumbCyl, stickGrp, new THREE.Vector3(1.05,-0.4,0), thumbGrp, new THREE.Vector3(0.4,0.05,0));
 }
 const _a=new THREE.Vector3(), _b=new THREE.Vector3();
 function aimCyl(cobj, fromObj, fromLocal, toObj, toLocal){
@@ -609,7 +712,7 @@ function aimCyl(cobj, fromObj, fromLocal, toObj, toLocal){
   cobj.group.quaternion.copy(q);
   // scale rod to reach
   const sx = dist / (cobj.len*0.95);
-  cobj.group.scale.x = Math.max(0.4, sx);
+  cobj.group.scale.x = Math.min(2.4, Math.max(0.4, sx));
 }
 
 /* =======================  CAMERA  ======================= */
@@ -649,6 +752,7 @@ function setupInput(){
     if(k==='v') toggleSpeed();
     if(k==='t') M.stanceTarget=1;
     if(k==='g') M.stanceTarget=0;
+    if(k==='n') M.thumbTarget = M.thumbTarget>0.5?0:1;
     if(k==='z') horn();
     if(k==='c') setView(view==='orbit'?'fpv':'orbit');
     if(k==='p') resetMachine();
@@ -667,6 +771,7 @@ function setupInput(){
   const ray=new THREE.Raycaster(), ndc=new THREE.Vector2();
 
   function pick(ev){
+    if(IS_MOBILE) return null;   // mobile uses the on-screen deck; canvas is camera-only
     const r=dom.getBoundingClientRect();
     ndc.x=((ev.clientX-r.left)/r.width)*2-1;
     ndc.y=-((ev.clientY-r.top)/r.height)*2+1;
@@ -782,14 +887,14 @@ function gatherCommands(){
   if(keys['arrowup']){travL+=1;travR+=1;} if(keys['arrowdown']){travL-=1;travR-=1;}
   if(keys['arrowleft']){travL-=1;travR+=1;} if(keys['arrowright']){travL+=1;travR-=1;}
   // merge drag holds (drag overrides if non-zero this frame)
-  CMD.boomY = boomY || dragHold.boomY || 0;
-  CMD.bktX  = bktX  || dragHold.bktX  || 0;
-  CMD.stickY= stickY|| dragHold.stickY|| 0;
-  CMD.swingX= swingX|| (boomSwingMod?0:(dragHold.swingX||0));
+  CMD.boomY = boomY || VJ.ry || dragHold.boomY || 0;
+  CMD.bktX  = bktX  || VJ.rx || dragHold.bktX  || 0;
+  CMD.stickY= stickY|| VJ.ly || dragHold.stickY|| 0;
+  CMD.swingX= swingX|| (boomSwingMod?0:(VJ.lx || dragHold.swingX||0));
   CMD.offX  = offX || (boomSwingMod?(dragHold.swingX||0):0);
-  CMD.dozer = dozer || dragHold.dozer || 0;
-  CMD.travL = clamp(travL + (dragHold.travL||0),-1,1);
-  CMD.travR = clamp(travR + (dragHold.travR||0),-1,1);
+  CMD.dozer = dozer || VJ.doz || dragHold.dozer || 0;
+  CMD.travL = clamp(travL + (dragHold.travL||0) + (VJ.tf+VJ.tt), -1,1);
+  CMD.travR = clamp(travR + (dragHold.travR||0) + (VJ.tf-VJ.tt), -1,1);
   // clear one-shot drag holds (spring return)
   dragHold = {};
 }
@@ -812,6 +917,7 @@ function step(dt){
     M.swing += CMD.swingX*0.7*tf*dt;
     M.offset= clamp(M.offset+ CMD.offX*0.6*tf*dt, LIM.offset[0],LIM.offset[1]);
     M.dozer = clamp(M.dozer + CMD.dozer*0.7*tf*dt, LIM.dozer[0],LIM.dozer[1]); // lever back / R -> blade up
+    M.thumb += (M.thumbTarget - M.thumb)*Math.min(1, dt*2.2*(0.5+tf));   // hydraulic thumb open/close
     M.trackL=CMD.travL; M.trackR=CMD.travR;
     drive={l:CMD.travL*tf, r:CMD.travR*tf};   // tracks feed the rigid-body sim
   } else {
@@ -824,6 +930,7 @@ function step(dt){
   applyPose();
   updateStance(dt);
   physicsStep(dt, drive);
+  updateRocks(dt);
   updateCamera();
   updateHUD();
 }
@@ -850,6 +957,20 @@ function updateHUD(){
   ck('ck3',M.key>=1||M.engineOn);
   ck('ck4',M.engineOn);
   ck('ck5',M.engineOn&&!M.locked);
+
+  if(IS_MOBILE){
+    const mk=document.getElementById('mKey');
+    mk.textContent=M.engineOn?'ENGINE ON':(M.key>=1?'CONTACT · START':'START ENGINE');
+    mk.className='mchip'+(M.engineOn?' grn':'');
+    const ml=document.getElementById('mLock'); ml.textContent='LOCK: '+(M.locked?'ON':'OFF'); ml.className='mchip '+(M.locked?'red':'grn');
+    const ms=document.getElementById('mSpeed'); ms.textContent=M.speedHi?'RABBIT':'TURTLE'; ms.className='mchip'+(M.speedHi?' on':'');
+    const wide=M.stanceTarget>0.5, mst=document.getElementById('mStance');
+    mst.textContent=wide?'TRACKS WIDE':'TRACKS NARROW'; mst.className='mchip'+(wide?' on':'');
+    document.getElementById('mView').textContent='VIEW: '+(view==='fpv'?'CAB':'EXT');
+    const mt=document.getElementById('mThumb'); const cl=M.thumbTarget>0.5; mt.textContent='THUMB: '+(cl?'CLOSED':'OPEN'); mt.className='mchip'+(cl?' on':'');
+    const tv=document.getElementById('mThrV'); if(tv) tv.textContent=Math.round(M.throttle*100)+'%';
+    const ts=document.getElementById('mThr'); if(ts && document.activeElement!==ts) ts.value=Math.round(M.throttle*100);
+  }
 }
 function ck(id,done){ document.getElementById(id).classList.toggle('done',!!done);
   const b=document.querySelector('#'+id+' .b'); b.textContent=done?'✓':''; }
@@ -861,9 +982,9 @@ function wireUI(){
   document.getElementById('bSpeed').onclick=toggleSpeed;
   document.getElementById('bStance').onclick=()=>{ M.stanceTarget = M.stanceTarget>0.5?0:1;
     const s=document.getElementById('sStance'); s.textContent=M.stanceTarget>0.5?'WIDE':'NARROW'; s.className='st '+(M.stanceTarget>0.5?'on':''); };
+  document.getElementById('bThumb').onclick=()=>{ M.thumbTarget = M.thumbTarget>0.5?0:1;
+    const s=document.getElementById('sThumb'); const cl=M.thumbTarget>0.5; s.textContent=cl?'CLOSED':'OPEN'; s.className='st '+(cl?'on':''); };
   document.getElementById('bHorn').onclick=horn;
-  document.getElementById('bPreheat').onclick=()=>{ M.preheat=!M.preheat;
-    const s=document.getElementById('sPre'); s.textContent=M.preheat?'GLOW':'OFF'; s.className='st '+(M.preheat?'on':''); };
   document.getElementById('bLight').onclick=()=>{ M.light=!M.light;
     const s=document.getElementById('sLight'); s.textContent=M.light?'ON':'OFF'; s.className='st '+(M.light?'on':''); };
   document.getElementById('vOrbit').onclick=()=>setView('orbit');
@@ -955,7 +1076,7 @@ function makeHeightField(scene){
    by many ground-contact points. Pushing the bucket into solid ground creates a
    reaction force at the tooth -> torque about the centre of mass -> the machine
    pivots on its back/track edge (and will flip if you overdo it). */
-const _TIP=new THREE.Vector3(0.62,-0.58,0);     // bucket tooth tip (local to bucketGrp)
+const _TIP=new THREE.Vector3(0.5,-0.71,0);      // bucket tooth tip (local to bucketGrp)
 const _DOZ=new THREE.Vector3(0.07,-0.17,0);     // dozer cutting edge (local to blade)
 const RB = {
   p:new THREE.Vector3(0,0.4,0),  q:new THREE.Quaternion(),
@@ -1110,6 +1231,183 @@ function updateStance(dt){
   for(const p of TRACK_PTS) p.z = p._side*half;
 }
 
+/* =======================  DYNAMIC ROCKS  ======================= */
+function spawnRock(x,z,r){
+  const geo=new THREE.DodecahedronGeometry(r,0);
+  const mesh=new THREE.Mesh(geo, new THREE.MeshStandardMaterial({color:0x756a5d, roughness:1, flatShading:true}));
+  mesh.castShadow=true; mesh.receiveShadow=true; scene.add(mesh);
+  const rock={ mesh, r, m:r*r*r*900, p:new THREE.Vector3(x, HF.height(x,z)+r, z),
+    v:new THREE.Vector3(), w:new THREE.Vector3(), q:new THREE.Quaternion(), held:false };
+  ROCKS.push(rock); return rock;
+}
+function buildColliders(){
+  // moving boxes (OBBs) on the machine that shove rocks around
+  COLLIDERS=[
+    {name:'blade',  anchor:dozerBladeMesh, off:new THREE.Vector3(0,0,0),      he:new THREE.Vector3(0.12,0.22,0.95), prev:null},
+    {name:'bucket', anchor:bucketGrp,      off:new THREE.Vector3(0.32,-0.3,0), he:new THREE.Vector3(0.4,0.4,0.46), prev:null},
+    {name:'thumb',  anchor:thumbGrp,       off:new THREE.Vector3(1.05,0.08,0),he:new THREE.Vector3(0.3,0.12,0.4),prev:null},
+    {name:'body',   anchor:root,           off:new THREE.Vector3(-0.2,0.75,0),he:new THREE.Vector3(1.7,0.75,1.15),  prev:null},
+  ];
+}
+const _cc=new THREE.Vector3(), _cq=new THREE.Quaternion(), _dl=new THREE.Vector3(),
+      _cl=new THREE.Vector3(), _nn=new THREE.Vector3(), _gp=new THREE.Vector3();
+function updateRocks(dt){
+  if(!HF || !ROCKS.length) return;
+  const g=9.81;
+  // refresh collider world transforms + velocities
+  for(const C of COLLIDERS){
+    C.anchor.updateWorldMatrix(true,false);
+    const c=C.off.clone().applyMatrix4(C.anchor.matrixWorld);
+    C.q = C.anchor.getWorldQuaternion(new THREE.Quaternion());
+    C.vel = C.prev ? c.clone().sub(C.prev).multiplyScalar(1/Math.max(dt,1e-3)) : new THREE.Vector3();
+    C.center = c; C.prev = c.clone();
+  }
+  // thumb grab: when clamped and a rock sits in the bucket mouth, hold it
+  const grabbing = M.thumb>0.7 && M.hydOK;
+  bucketGrp.updateWorldMatrix(true,false);
+  _gp.set(0.45,-0.55,0).applyMatrix4(bucketGrp.matrixWorld);   // pocket under the scoop where the thumb clamps
+
+  for(const rk of ROCKS){
+    // ---- grab / hold logic ----
+    if(rk.held){
+      if(!grabbing){ rk.held=false; }
+      else {
+        rk.v.copy(_gp).sub(rk.p).multiplyScalar(1/Math.max(dt,1e-3));   // velocity to track mouth
+        rk.p.copy(_gp);
+        rollAndPlace(rk,dt,true);
+        continue;
+      }
+    } else if(grabbing && rk.r<0.45 && rk.p.distanceTo(_gp) < rk.r+0.45){
+      rk.held=true; rk.p.copy(_gp); rollAndPlace(rk,dt,true); continue;
+    }
+
+    // ---- gravity ----
+    rk.v.y -= g*dt;
+
+    // ---- machine collisions ----
+    for(const C of COLLIDERS) collideRockOBB(rk, C);
+
+    // ---- rock-rock (cheap) ----
+    for(const o of ROCKS){ if(o===rk||o.held) continue;
+      _dl.copy(rk.p).sub(o.p); const dd=_dl.length(), min=rk.r+o.r;
+      if(dd>1e-4 && dd<min){ _dl.multiplyScalar(1/dd); const pen=min-dd;
+        rk.p.addScaledVector(_dl, pen*0.5); o.p.addScaledVector(_dl,-pen*0.5);
+        const rel=rk.v.clone().sub(o.v).dot(_dl); if(rel<0){ rk.v.addScaledVector(_dl,-rel*0.5); o.v.addScaledVector(_dl,rel*0.5);} }
+    }
+
+    // ---- terrain contact ----
+    const gh=HF.height(rk.p.x,rk.p.z);
+    if(rk.p.y - rk.r < gh){
+      terrainNormal(rk.p.x,rk.p.z,_nn);
+      rk.p.y = gh + rk.r;
+      const vn=rk.v.dot(_nn);
+      if(vn<0) rk.v.addScaledVector(_nn, -1.25*vn);     // bounce a little
+      // ground friction (rolling resistance + slope roll comes from gravity already)
+      rk.v.x*=(1-Math.min(0.9,3*dt)); rk.v.z*=(1-Math.min(0.9,3*dt));
+    }
+    // global damping + clamp
+    rk.v.multiplyScalar(1-Math.min(0.5,0.4*dt));
+    if(rk.v.lengthSq()>400) rk.v.setLength(20);
+    rk.p.addScaledVector(rk.v, dt);
+    rollAndPlace(rk,dt,false);
+  }
+}
+function rollAndPlace(rk,dt,held){
+  if(!held){ // roll about axis perpendicular to horizontal velocity
+    const vh=Math.hypot(rk.v.x,rk.v.z);
+    if(vh>0.02){ const ax=new THREE.Vector3(rk.v.z,0,-rk.v.x).normalize();
+      const ang=vh*dt/rk.r; rk.q.premultiply(new THREE.Quaternion().setFromAxisAngle(ax,ang)); }
+  }
+  rk.mesh.position.copy(rk.p); rk.mesh.quaternion.copy(rk.q);
+}
+function collideRockOBB(rk, C){
+  if(!C.center) return;
+  _dl.copy(rk.p).sub(C.center).applyQuaternion(_cq.copy(C.q).invert());   // rock in box-local
+  _cl.set(clamp(_dl.x,-C.he.x,C.he.x), clamp(_dl.y,-C.he.y,C.he.y), clamp(_dl.z,-C.he.z,C.he.z));
+  _nn.copy(_dl).sub(_cl); const dist=_nn.length();
+  if(dist>rk.r) return;                                  // no contact
+  if(dist>1e-4){
+    _nn.multiplyScalar(1/dist).applyQuaternion(C.q);     // outward contact normal (world)
+    rk.p.addScaledVector(_nn, rk.r-dist);
+  } else {
+    // center inside the box: eject along the nearest face
+    const ax=[C.he.x-Math.abs(_dl.x), C.he.y-Math.abs(_dl.y), C.he.z-Math.abs(_dl.z)];
+    const mi = ax[0]<ax[1] ? (ax[0]<ax[2]?0:2) : (ax[1]<ax[2]?1:2);
+    _nn.set(0,0,0).setComponent(mi, _dl.getComponent(mi)>=0?1:-1).applyQuaternion(C.q);
+    rk.p.addScaledVector(_nn, rk.r+0.02);
+  }
+  const vrel=rk.v.clone().sub(C.vel).dot(_nn);
+  if(vrel<0) rk.v.addScaledVector(_nn, -(1.05)*vrel);    // stop the approach
+  rk.v.addScaledVector(C.vel, 0.6);                      // carried along by the moving part
+}
+
+
+
+/* =======================  MOBILE TOUCH DECK  ======================= */
+function makeVPad(padId, knobId, cb){
+  const pad=document.getElementById(padId), knob=document.getElementById(knobId);
+  let active=false, pid=null;
+  function set(ev){
+    const r=pad.getBoundingClientRect();
+    const cx=r.left+r.width/2, cy=r.top+r.height/2, rad=r.width/2;
+    let nx=(ev.clientX-cx)/rad, ny=(ev.clientY-cy)/rad;
+    const m=Math.hypot(nx,ny); if(m>1){ nx/=m; ny/=m; }
+    knob.style.left=(29+nx*29)+'%'; knob.style.top=(29+ny*29)+'%';
+    cb(nx, -ny);                 // screen y is down -> flip so up is positive
+  }
+  pad.addEventListener('pointerdown', e=>{ e.preventDefault(); active=true; pid=e.pointerId; pad.setPointerCapture(pid); set(e); });
+  pad.addEventListener('pointermove', e=>{ if(active && e.pointerId===pid) set(e); });
+  const up=()=>{ if(!active) return; active=false; knob.style.left='29%'; knob.style.top='29%'; cb(0,0); };
+  pad.addEventListener('pointerup',up); pad.addEventListener('pointercancel',up);
+}
+function holdBtn(id, on, off){
+  const el=document.getElementById(id); if(!el) return;
+  el.addEventListener('pointerdown', e=>{ e.preventDefault(); el.setPointerCapture(e.pointerId); el.classList.add('on'); on(); });
+  const up=()=>{ el.classList.remove('on'); off(); };
+  el.addEventListener('pointerup',up); el.addEventListener('pointercancel',up); el.addEventListener('lostpointercapture',up);
+}
+function setupMobile(){
+  // left pad: x=swing, y=stick out/in ; right pad: x=bucket, y=boom (forward=down)
+  makeVPad('mLeft','mLeftK',(x,y)=>{ VJ.lx=x; VJ.ly=y; });
+  makeVPad('mRight','mRightK',(x,y)=>{ VJ.rx=x; VJ.ry=y; });
+  holdBtn('mDozUp',()=>VJ.doz=1,()=>VJ.doz=0);
+  holdBtn('mDozDn',()=>VJ.doz=-1,()=>VJ.doz=0);
+  holdBtn('mTf',()=>VJ.tf=1,()=>VJ.tf=0);
+  holdBtn('mTb',()=>VJ.tf=-1,()=>VJ.tf=0);
+  holdBtn('mTl',()=>VJ.tt=-1,()=>VJ.tt=0);
+  holdBtn('mTr',()=>VJ.tt=1,()=>VJ.tt=0);
+  document.getElementById('mKey').onclick=()=>cycleKey();
+  document.getElementById('mLock').onclick=toggleLock;
+  document.getElementById('mSpeed').onclick=toggleSpeed;
+  document.getElementById('mStance').onclick=()=>{ M.stanceTarget=M.stanceTarget>0.5?0:1; };
+  document.getElementById('mThumb').onclick=()=>{ M.thumbTarget=M.thumbTarget>0.5?0:1; };
+  document.getElementById('mView').onclick=()=>setView(view==='orbit'?'fpv':'orbit');
+  document.getElementById('mHorn').onclick=horn;
+  document.getElementById('mReset').onclick=resetMachine;
+  const thr=document.getElementById('mThr'); thr.addEventListener('input',()=>{ M.throttle=thr.value/100; });
+}
+function fitRenderer(){
+  const app=document.getElementById('app');
+  if(IS_MOBILE){
+    const top=document.getElementById('topbar').offsetHeight||52;
+    const avail=window.innerHeight-top;
+    const viewH=Math.round(avail*0.5);
+    app.style.top=top+'px'; app.style.height=viewH+'px';
+    document.getElementById('mdeck').style.height=(avail-viewH)+'px';
+    renderer.setSize(window.innerWidth, viewH);
+    camera.aspect=window.innerWidth/viewH;
+  } else {
+    app.style.top='0px'; app.style.height='100%';
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    camera.aspect=window.innerWidth/window.innerHeight;
+  }
+  camera.updateProjectionMatrix();
+}
+function applyResponsive(){
+  IS_MOBILE = window.matchMedia('(pointer:coarse)').matches || window.innerWidth<=820;
+  document.body.classList.toggle('mobile', IS_MOBILE);
+  fitRenderer();
+}
 
 /* =======================  SCENE / LOOP  ======================= */
 function init(){
@@ -1140,19 +1438,18 @@ function init(){
   // diggable terrain heightfield with sand piles
   HF = makeHeightField(scene);
 
-  // scattered rocks — static reference points so motion over the sand is obvious
-  for(let i=0;i<16;i++){ const a=Math.random()*6.28, rad=9+Math.random()*22, x=Math.cos(a)*rad, z=Math.sin(a)*rad;
-    const r=0.18+Math.random()*0.34;
-    const rk=new THREE.Mesh(new THREE.DodecahedronGeometry(r,0),
-      new THREE.MeshStandardMaterial({color:0x6f655a, roughness:1, flatShading:true}));
-    rk.position.set(x, HF.height(x,z)+r*0.5, z);
-    rk.rotation.set(Math.random()*3,Math.random()*3,Math.random()*3);
-    rk.castShadow=true; rk.receiveShadow=true; scene.add(rk); }
-
   buildMachine();
-  setupInput(); wireUI();
+  buildColliders();
+  // scattered dynamic rocks — collidable, can be pushed/rolled by the blade & bucket
+  for(let i=0;i<14;i++){ const a=Math.random()*6.28, rad=9+Math.random()*20;
+    spawnRock(Math.cos(a)*rad, Math.sin(a)*rad, 0.22+Math.random()*0.3); }
+  // a couple of small ones near the work area to grab with the thumb
+  spawnRock(5.5, 1.2, 0.26); spawnRock(6.2,-1.6,0.3); spawnRock(4.8,-0.4,0.24);
+  setupInput(); wireUI(); setupMobile();
   updateKeyUI();
-  window.addEventListener('resize',()=>{ camera.aspect=W()/H(); camera.updateProjectionMatrix(); renderer.setSize(W(),H()); });
+  applyResponsive();
+  window.addEventListener('resize', applyResponsive);
+  window.addEventListener('orientationchange', ()=>setTimeout(applyResponsive,200));
   loop();
 }
 function loop(){
