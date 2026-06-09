@@ -913,7 +913,7 @@ function step(dt){
   if(hydOK){
     M.boom  = clamp(M.boom  - CMD.boomY*rate*tf*dt, LIM.boom[0],LIM.boom[1]);   // fwd(+) -> boom down(-)
     M.bucket= clamp(M.bucket+ CMD.bktX *rate*tf*dt, LIM.bucket[0],LIM.bucket[1]); // right(+) -> dump(+)
-    M.stick = clamp(M.stick - CMD.stickY*rate*tf*dt, LIM.stick[0],LIM.stick[1]);  // fwd(+) -> stick out(-)
+    M.stick = clamp(M.stick + CMD.stickY*rate*tf*dt, LIM.stick[0],LIM.stick[1]);  // fwd(+) -> stick extends out(+)
     M.swing += CMD.swingX*0.7*tf*dt;
     M.offset= clamp(M.offset+ CMD.offX*0.6*tf*dt, LIM.offset[0],LIM.offset[1]);
     M.dozer = clamp(M.dozer + CMD.dozer*0.7*tf*dt, LIM.dozer[0],LIM.dozer[1]); // lever back / R -> blade up
