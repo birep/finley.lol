@@ -210,6 +210,7 @@
   <div class="bar"><i id="barThr"></i></div>
   <div class="row"><span>Travel mode</span><b id="tSpd">— </b></div>
   <div class="row"><span>Material moved</span><b id="tDug">0.0</b></div>
+  <div class="row"><span>In bucket</span><b id="tLoad">0</b></div>
   <div class="secttl" style="margin-top:10px;">Implement angles</div>
   <div class="gauge">
     <div class="g"><div class="v" id="aBoom">0°</div><div class="l">BOOM</div></div>
@@ -372,6 +373,7 @@ const M = {
   swing:0, offset:0, boom:0, stick:0, bucket:0, dozer:0, thumb:0, thumbTarget:0,
   // pose / travel
   px:0, pz:0, heading:0, groundY:0, jack:0, dug:0,
+  bucketLoad:0,   // # of granular particles currently inside the bucket (for HUD)
   // engine
   key:0, keyMax:0, engineOn:false, rpm:0, throttle:0.0,
   locked:true, speedHi:false, preheat:false, light:false,
@@ -398,7 +400,7 @@ let root, undercar, leftTrack, rightTrack, dozerGrp, house, boomSwing, boomGrp, 
 let boomCyl, stickCyl, bktCyl;
 let dozerBladeMesh=null;
 let thumbGrp=null, thumbCyl=null;
-let ROCKS=[], COLLIDERS=[];
+let ROCKS=[], COLLIDERS=[], PROPS=[];
 // cockpit controls (Object3D) and their pivots
 let ctl = {};
 let workLightA, workLightB;
@@ -416,6 +418,11 @@ const MAT = {
   red:     () => new THREE.MeshStandardMaterial({color:0xd23b2c, roughness:.5}),
   knob:    () => new THREE.MeshStandardMaterial({color:0x121212, roughness:.6}),
   amber:   () => new THREE.MeshStandardMaterial({color:0xf4b400, roughness:.5, emissive:0x000000}),
+  sand:    () => new THREE.MeshStandardMaterial({color:0x9c8358, roughness:1, metalness:0}),
+  bark:    () => new THREE.MeshStandardMaterial({color:0x5b4a35, roughness:1, metalness:0, flatShading:true}),
+  wood:    () => new THREE.MeshStandardMaterial({color:0xc2a06a, roughness:.9, metalness:0}),
+  block:   () => new THREE.MeshStandardMaterial({color:0x8f8a80, roughness:1, metalness:0}),
+  rubber:  () => new THREE.MeshStandardMaterial({color:0x18181a, roughness:.95, metalness:0, flatShading:true}),
 };
 function box(w,h,d,mat,x=0,y=0,z=0){const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat);m.position.set(x,y,z);m.castShadow=true;m.receiveShadow=true;return m;}
 function cyl(rt,rb,h,mat,seg=18){const m=new THREE.Mesh(new THREE.CylinderGeometry(rt,rb,h,seg),mat);m.castShadow=true;m.receiveShadow=true;return m;}
@@ -930,7 +937,10 @@ function step(dt){
   applyPose();
   updateStance(dt);
   physicsStep(dt, drive);
+  refreshColliders(dt);
   updateRocks(dt);
+  updateProps(dt);
+  updateParticles(dt);
   updateCamera();
   updateHUD();
 }
@@ -944,6 +954,7 @@ function updateHUD(){
   document.getElementById('barThr').style.width=(M.throttle*100)+'%';
   document.getElementById('tSpd').textContent=M.speedHi?'RABBIT (HI)':'TURTLE (LO)';
   document.getElementById('tDug').textContent=(M.dug*0.12).toFixed(1)+' m³';
+  document.getElementById('tLoad').textContent=M.bucketLoad|0;
   const d=x=>Math.round(x*180/Math.PI);
   document.getElementById('aBoom').textContent=d(M.boom)+'°';
   document.getElementById('aStick').textContent=d(M.stick)+'°';
@@ -1052,7 +1063,7 @@ function makeHeightField(scene){
     const r=radius, maxDrop=2.6*dt; let moved=0;
     const a=Math.max(0,Math.floor((x-r-x0)/cell)), b=Math.min(N-1,Math.ceil((x+r-x0)/cell));
     const c=Math.max(0,Math.floor((z-r-x0)/cell)), d=Math.min(N-1,Math.ceil((z+r-x0)/cell));
-    const tgt=Math.max(0,targetY);
+    const tgt=Math.max(-2.0,targetY);   // can dig real holes below grade (not just flatten mounds)
     for(let iz=c;iz<=d;iz++)for(let ix=a;ix<=b;ix++){
       const wx=x0+ix*cell, wz=x0+iz*cell, dx=wx-x, dz=wz-z, dist=Math.sqrt(dx*dx+dz*dz);
       if(dist>r) continue;
@@ -1062,13 +1073,47 @@ function makeHeightField(scene){
     if(moved>0) dirty=true;
     return moved;
   }
+  // deposit `vol` of material as a bump (conserves the same summed-height units `lower` removes)
+  function raise(x,z,radius,vol){
+    if(vol<=0) return 0;
+    const r=radius;
+    const a=Math.max(0,Math.floor((x-r-x0)/cell)), b=Math.min(N-1,Math.ceil((x+r-x0)/cell));
+    const c=Math.max(0,Math.floor((z-r-x0)/cell)), e=Math.min(N-1,Math.ceil((z+r-x0)/cell));
+    let wsum=0;
+    for(let iz=c;iz<=e;iz++)for(let ix=a;ix<=b;ix++){
+      const dx=x0+ix*cell-x, dz=x0+iz*cell-z, dist=Math.sqrt(dx*dx+dz*dz);
+      if(dist>r) continue; wsum += 1-dist/r;
+    }
+    if(wsum<=0) return 0;
+    const scale=vol/wsum;
+    for(let iz=c;iz<=e;iz++)for(let ix=a;ix<=b;ix++){
+      const dx=x0+ix*cell-x, dz=x0+iz*cell-z, dist=Math.sqrt(dx*dx+dz*dz);
+      if(dist>r) continue; data[idx(ix,iz)] += (1-dist/r)*scale;
+    }
+    dirty=true; return vol;
+  }
+  // local angle-of-repose relaxation: sand/gravel slumps so holes and piles settle to a natural slope
+  function settle(x,z,radius,dt){
+    const r=radius, maxd=0.55, flow=Math.min(0.25,2.2*dt);   // max stable neighbour height diff
+    const a=Math.max(1,Math.floor((x-r-x0)/cell)), b=Math.min(N-2,Math.ceil((x+r-x0)/cell));
+    const c=Math.max(1,Math.floor((z-r-x0)/cell)), e=Math.min(N-2,Math.ceil((z+r-x0)/cell));
+    if(b<a||e<c) return;
+    let moved=false;
+    for(let iz=c;iz<=e;iz++)for(let ix=a;ix<=b;ix++){
+      const i=idx(ix,iz), h=data[i];
+      const nb=[idx(ix-1,iz),idx(ix+1,iz),idx(ix,iz-1),idx(ix,iz+1)];
+      for(const j of nb){ const dh=h-data[j];
+        if(dh>maxd){ const m=(dh-maxd)*0.25*flow; data[i]-=m; data[j]+=m; moved=true; } }
+    }
+    if(moved) dirty=true;
+  }
   function flush(){
     if(!dirty) return; dirty=false;
     const p=geo.attributes.position.array;
     for(let iz=0;iz<N;iz++)for(let ix=0;ix<N;ix++) p[idx(ix,iz)*3+1]=data[idx(ix,iz)];
     geo.attributes.position.needsUpdate=true; geo.computeVertexNormals();
   }
-  return {N,span,cell,x0,height,lower,flush};
+  return {N,span,cell,x0,height,lower,raise,settle,flush};
 }
 
 /* =======================  RIGID-BODY DYNAMICS  ======================= */
@@ -1132,7 +1177,12 @@ function physSub(h, drive){
     _vp.copy(RB.w).cross(_r).add(RB.v);
     const vn=_vp.dot(_n);
     let kN=70000, cN=5200, cap=1e9;
-    if(type==='bucket' && gh>0.06 && diggingNow){ M.dug += HF.lower(_cp.x,_cp.z,0.75,_cp.y,h); kN=2600; cN=700; }
+    if(type==='bucket' && gh>-1.9 && diggingNow){
+      const got=HF.lower(_cp.x,_cp.z,0.75,_cp.y,h);
+      M.dug += got;
+      if(got>0){ HF.settle(_cp.x,_cp.z,1.2,h); emitParticles(_cp.x, gh, _cp.z, got); }  // carved soil becomes granular particles
+      kN=2600; cN=700;
+    }
     if(type==='bucket' || type==='dozer') cap=90000;
     let Fn=kN*d - cN*vn; if(Fn<0) Fn=0; if(Fn>cap) Fn=cap;
     _Ftot.copy(_n).multiplyScalar(Fn);
@@ -1232,12 +1282,14 @@ function updateStance(dt){
 }
 
 /* =======================  DYNAMIC ROCKS  ======================= */
-function spawnRock(x,z,r){
+function spawnRock(x,z,r,opt){
+  opt=opt||{};
   const geo=new THREE.DodecahedronGeometry(r,0);
-  const mesh=new THREE.Mesh(geo, new THREE.MeshStandardMaterial({color:0x756a5d, roughness:1, flatShading:true}));
+  const mesh=new THREE.Mesh(geo, new THREE.MeshStandardMaterial({color:opt.color||0x756a5d, roughness:1, flatShading:true}));
   mesh.castShadow=true; mesh.receiveShadow=true; scene.add(mesh);
-  const rock={ mesh, r, m:r*r*r*900, p:new THREE.Vector3(x, HF.height(x,z)+r, z),
-    v:new THREE.Vector3(), w:new THREE.Vector3(), q:new THREE.Quaternion(), held:false };
+  const rock={ mesh, r, m:r*r*r*900, p:new THREE.Vector3(x, (opt.y!=null?opt.y:HF.height(x,z)+r), z),
+    v:new THREE.Vector3(), w:new THREE.Vector3(), q:new THREE.Quaternion(), held:false,
+    rest:(opt.rest!=null?opt.rest:1.25) };
   ROCKS.push(rock); return rock;
 }
 function buildColliders(){
@@ -1251,10 +1303,8 @@ function buildColliders(){
 }
 const _cc=new THREE.Vector3(), _cq=new THREE.Quaternion(), _dl=new THREE.Vector3(),
       _cl=new THREE.Vector3(), _nn=new THREE.Vector3(), _gp=new THREE.Vector3();
-function updateRocks(dt){
-  if(!HF || !ROCKS.length) return;
-  const g=9.81;
-  // refresh collider world transforms + velocities
+// refresh moving-collider world transforms + velocities (shared by rocks and props)
+function refreshColliders(dt){
   for(const C of COLLIDERS){
     C.anchor.updateWorldMatrix(true,false);
     const c=C.off.clone().applyMatrix4(C.anchor.matrixWorld);
@@ -1262,6 +1312,10 @@ function updateRocks(dt){
     C.vel = C.prev ? c.clone().sub(C.prev).multiplyScalar(1/Math.max(dt,1e-3)) : new THREE.Vector3();
     C.center = c; C.prev = c.clone();
   }
+}
+function updateRocks(dt){
+  if(!HF || !ROCKS.length) return;
+  const g=9.81;
   // thumb grab: when clamped and a rock sits in the bucket mouth, hold it
   const grabbing = M.thumb>0.7 && M.hydOK;
   bucketGrp.updateWorldMatrix(true,false);
@@ -1301,7 +1355,7 @@ function updateRocks(dt){
       terrainNormal(rk.p.x,rk.p.z,_nn);
       rk.p.y = gh + rk.r;
       const vn=rk.v.dot(_nn);
-      if(vn<0) rk.v.addScaledVector(_nn, -1.25*vn);     // bounce a little
+      if(vn<0) rk.v.addScaledVector(_nn, -rk.rest*vn);   // bounce (gravel barely bounces)
       // ground friction (rolling resistance + slope roll comes from gravity already)
       rk.v.x*=(1-Math.min(0.9,3*dt)); rk.v.z*=(1-Math.min(0.9,3*dt));
     }
@@ -1341,7 +1395,309 @@ function collideRockOBB(rk, C){
   rk.v.addScaledVector(C.vel, 0.6);                      // carried along by the moving part
 }
 
+/* =======================  HEAVY PROPS (logs, blocks, tyres)  =======================
+   Point-sampled rigid bodies: each carries a set of surface points. At every point
+   we apply a penalty normal force + friction from the terrain and from the machine's
+   moving collider boxes — exactly the model the excavator body uses. Stiffness and
+   damping scale with mass, so every prop shares the machine's stable natural
+   frequency and damping ratio. Result: they roll, slide, topple, and can be shoved,
+   rolled, and (with finesse) scooped by the bucket and blade. */
+const _aQi=new THREE.Quaternion(), _ar=new THREE.Vector3(), _avp=new THREE.Vector3(),
+      _an=new THREE.Vector3(), _aF=new THREE.Vector3(), _aT=new THREE.Vector3(),
+      _atmp=new THREE.Vector3(), _acp=new THREE.Vector3(), _aft=new THREE.Vector3(),
+      _alocal=new THREE.Vector3(), _aQi2=new THREE.Quaternion(), _anrm=new THREE.Vector3(),
+      _arelv=new THREE.Vector3(), _ad=new THREE.Vector3();
 
+function addProp(mesh, pts, Ib, m, x, z, yaw, sepR, y0){
+  mesh.castShadow=true; mesh.receiveShadow=true; scene.add(mesh);
+  const q=new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,1,0), yaw||0);
+  // drop the body so its lowest point rests on the terrain
+  let minY=1e9; for(const lp of pts){ _atmp.copy(lp).applyQuaternion(q); if(_atmp.y<minY) minY=_atmp.y; }
+  const p=new THREE.Vector3(x, (y0!=null?y0:HF.height(x,z)) - minY + 0.02, z);
+  const prop={ mesh, pts, m, Ib, IbInv:new THREE.Vector3(1/Ib.x,1/Ib.y,1/Ib.z),
+    p, q, v:new THREE.Vector3(), w:new THREE.Vector3(), sepR };
+  prop.mesh.position.copy(p); prop.mesh.quaternion.copy(q);
+  PROPS.push(prop); return prop;
+}
+function propSub(pr, h){
+  _aF.set(0,-pr.m*9.81,0); _aT.set(0,0,0);
+  _aQi.copy(pr.q).invert();
+  const K=120*pr.m, C=7.0*pr.m, capF=80*pr.m;      // mass-scaled => uniform natural freq & damping
+  for(const lp of pr.pts){
+    _acp.copy(lp).applyQuaternion(pr.q).add(pr.p);       // contact point in world
+    _ar.copy(_acp).sub(pr.p);
+    _avp.copy(pr.w).cross(_ar).add(pr.v);                // its velocity
+    // ---- terrain ----
+    const gh=HF.height(_acp.x,_acp.z), d=gh-_acp.y;
+    if(d>0){
+      terrainNormal(_acp.x,_acp.z,_an);
+      const vn=_avp.dot(_an);
+      let Fn=K*d - C*vn; if(Fn<0) Fn=0; if(Fn>capF) Fn=capF;
+      _aft.copy(_an).multiplyScalar(Fn);
+      _atmp.copy(_avp).addScaledVector(_an,-vn); const vt=_atmp.length();
+      if(vt>1e-4){ const ft=Math.min(0.7*Fn, 0.6*C*vt); _aft.addScaledVector(_atmp,-ft/vt); }
+      _aF.add(_aft); _aT.add(_atmp.copy(_ar).cross(_aft));
+    }
+    // ---- machine colliders (bucket / blade / thumb / body OBBs) ----
+    for(const Cl of COLLIDERS){
+      if(!Cl.center) continue;
+      _alocal.copy(_acp).sub(Cl.center).applyQuaternion(_aQi2.copy(Cl.q).invert());
+      const ox=Cl.he.x-Math.abs(_alocal.x), oy=Cl.he.y-Math.abs(_alocal.y), oz=Cl.he.z-Math.abs(_alocal.z);
+      if(ox<=0||oy<=0||oz<=0) continue;                  // point is outside this box
+      const mi = ox<oy ? (ox<oz?0:2) : (oy<oz?1:2);      // nearest face -> push direction
+      const depth = mi===0?ox:(mi===1?oy:oz);
+      _anrm.set(0,0,0).setComponent(mi, _alocal.getComponent(mi)>=0?1:-1).applyQuaternion(Cl.q);
+      _arelv.copy(_avp).sub(Cl.vel);
+      const vn=_arelv.dot(_anrm);
+      let Fn=K*depth - C*vn; if(Fn<0) Fn=0; if(Fn>capF) Fn=capF;
+      _aft.copy(_anrm).multiplyScalar(Fn);
+      _atmp.copy(_arelv).addScaledVector(_anrm,-vn); const vt=_atmp.length();   // grip drags it along
+      if(vt>1e-4){ const ft=Math.min(0.6*Fn, 0.6*C*vt); _aft.addScaledVector(_atmp,-ft/vt); }
+      _aF.add(_aft); _aT.add(_atmp.copy(_ar).cross(_aft));
+    }
+  }
+  // integrate (same scheme as the excavator body)
+  pr.v.addScaledVector(_aF, h/pr.m);
+  _atmp.copy(_aT).applyQuaternion(_aQi);
+  _atmp.set(_atmp.x*pr.IbInv.x,_atmp.y*pr.IbInv.y,_atmp.z*pr.IbInv.z).applyQuaternion(pr.q);
+  pr.w.addScaledVector(_atmp, h);
+  pr.v.multiplyScalar(1-Math.min(0.3,0.5*h));
+  pr.w.multiplyScalar(1-Math.min(0.4,1.4*h));
+  pr.p.addScaledVector(pr.v, h);
+  const wq=new THREE.Quaternion(pr.w.x*h*0.5,pr.w.y*h*0.5,pr.w.z*h*0.5,0).multiply(pr.q);
+  pr.q.set(pr.q.x+wq.x,pr.q.y+wq.y,pr.q.z+wq.z,pr.q.w+wq.w).normalize();
+}
+function updateProps(dt){
+  if(!HF || !PROPS.length) return;
+  const n=5, h=Math.min(0.02,dt)/n;
+  for(let s=0;s<n;s++){
+    for(const pr of PROPS) propSub(pr,h);
+    // cheap broad-phase prop-prop separation (bounding spheres)
+    for(let i=0;i<PROPS.length;i++)for(let j=i+1;j<PROPS.length;j++){
+      const A=PROPS[i], B=PROPS[j]; _ad.copy(A.p).sub(B.p);
+      const dd=_ad.length(), min=A.sepR+B.sepR;
+      if(dd>1e-4 && dd<min){ _ad.multiplyScalar(1/dd); const pen=min-dd;
+        const wa=B.m/(A.m+B.m), wb=A.m/(A.m+B.m);
+        A.p.addScaledVector(_ad, pen*wa); B.p.addScaledVector(_ad,-pen*wb);
+        const rel=_ad.dot(_atmp.copy(A.v).sub(B.v));
+        if(rel<0){ A.v.addScaledVector(_ad,-rel*wa); B.v.addScaledVector(_ad, rel*wb); } }
+    }
+  }
+  for(const pr of PROPS){
+    if(pr.v.lengthSq()<2e-3 && pr.w.lengthSq()<2e-3){ pr.v.set(0,0,0); pr.w.set(0,0,0); }  // sleep
+    if(pr.v.lengthSq()>900) pr.v.setLength(30);
+    if(pr.w.lengthSq()>400) pr.w.setLength(20);
+    pr.mesh.position.copy(pr.p); pr.mesh.quaternion.copy(pr.q);
+  }
+}
+// ---- prop builders ----
+function makeLog(x,z,yaw,L,R){
+  L=L||4.5; R=R||0.38;            // ~6ft section, ~12in dia at 0.40 m/unit
+  const g=new THREE.Group();
+  const barrel=cyl(R,R,L,MAT.bark(),14); barrel.rotation.z=Math.PI/2; g.add(barrel);   // axis along local X
+  for(const sx of [L/2,-L/2]){ const cap=cyl(R*0.97,R*0.97,0.06,MAT.wood(),14); cap.rotation.z=Math.PI/2; cap.position.x=sx; g.add(cap); }
+  const pts=[], nx=6;
+  for(let i=0;i<nx;i++){ const px=-L/2+R + (L-2*R)*i/(nx-1);
+    for(let a=0;a<4;a++){ const th=a*Math.PI/2; pts.push(new THREE.Vector3(px, R*Math.sin(th), R*Math.cos(th))); } }
+  const m=85;
+  const Iperp=(1/12)*m*(3*R*R+L*L);
+  return addProp(g, pts, new THREE.Vector3(0.5*m*R*R, Iperp, Iperp), m, x, z, yaw, 1.2);
+}
+function makeBlock(x,z,yaw){
+  const w=1.0, hh=0.5, d=0.5;     // 16x8x8in CMU at 0.40 m/unit
+  const g=new THREE.Group();
+  g.add(box(w,hh,d,MAT.block()));
+  g.add(box(w*0.30,0.04,d*0.55,MAT.dark(), -w*0.21, hh/2, 0));   // hollow cores (suggested)
+  g.add(box(w*0.30,0.04,d*0.55,MAT.dark(),  w*0.21, hh/2, 0));
+  const pts=[];
+  for(const sx of [-w/2,w/2]) for(const sy of [-hh/2,hh/2]) for(const sz of [-d/2,d/2]) pts.push(new THREE.Vector3(sx,sy,sz));
+  for(const sx of [-w/2,0,w/2]) pts.push(new THREE.Vector3(sx,-hh/2,0));    // bottom-face mids for stable rest
+  const m=17;
+  return addProp(g, pts, new THREE.Vector3((1/12)*m*(hh*hh+d*d),(1/12)*m*(w*w+d*d),(1/12)*m*(w*w+hh*hh)), m, x, z, yaw, 0.5);
+}
+function makeTire(x,z,yaw){
+  const Rc=0.55, rt=0.22;         // ~24in OD car tyre at 0.40 m/unit
+  const g=new THREE.Group();
+  const t=new THREE.Mesh(new THREE.TorusGeometry(Rc,rt,10,20), MAT.rubber());
+  t.rotation.x=Math.PI/2; t.castShadow=true; t.receiveShadow=true; g.add(t);   // lie flat: axis = local Y
+  const pts=[];
+  for(let a=0;a<8;a++){ const th=a*Math.PI/4, cx=Math.cos(th)*Rc, cz=Math.sin(th)*Rc;
+    pts.push(new THREE.Vector3(cx,-rt,cz)); pts.push(new THREE.Vector3(cx, rt,cz)); }
+  for(let a=0;a<6;a++){ const th=a*Math.PI/3; pts.push(new THREE.Vector3(Math.cos(th)*(Rc+rt),0,Math.sin(th)*(Rc+rt))); }
+  const m=11;
+  return addProp(g, pts, new THREE.Vector3(0.5*m*Rc*Rc, m*Rc*Rc, 0.5*m*Rc*Rc), m, x, z, yaw, 0.72);
+}
+function addStump(x,z){
+  const g=new THREE.Group(), h=HF.height(x,z);
+  const trunk=cyl(0.30,0.38,0.62,MAT.bark(),12); trunk.position.y=0.31; g.add(trunk);
+  const top=cyl(0.28,0.28,0.05,MAT.wood(),12); top.position.y=0.62; g.add(top);
+  for(let a=0;a<5;a++){ const rg=new THREE.Group(); rg.add(box(0.5,0.13,0.17,MAT.bark(),0.32,0.06,0)); rg.rotation.y=a*1.2566; g.add(rg); }
+  g.position.set(x,h,z); g.traverse(o=>{ if(o.isMesh){o.castShadow=true;o.receiveShadow=true;} }); scene.add(g);
+}
+
+/* =======================  GRANULAR MATERIAL (DEM particles)  =======================
+   Sand / gravel as thousands of small spheres. Each particle falls under gravity and
+   collides with: its neighbours (via a spatial hash) -> a real pile at the angle of
+   repose; the terrain; and the machine's collider boxes. The BUCKET is modelled as its
+   five actual walls with the bottom (teeth) face left OPEN — so material is retained
+   purely because walls are beneath it, and pours out when you tilt the opening down.
+   Nothing about "teeth direction" is hard-coded; scoop / carry / dump are emergent. */
+const PR=0.075, PMAX=4000, PCELL=2*PR, INV_PCELL=1/PCELL, HASHSIZE=1<<14;
+const pPos=new Float32Array(PMAX*3), pVel=new Float32Array(PMAX*3), pScale=new Float32Array(PMAX);
+const cellHead=new Int32Array(HASHSIZE), pNext=new Int32Array(PMAX);
+let pCount=0, pMesh=null, _emitAcc=0;
+let PWALLS=[];
+const PFRIC=0.2, PGFRIC=0.82, PWFRIC=0.45;     // particle / ground / wall tangential grip
+const _pv=new THREE.Vector3(), _pn2=new THREE.Vector3(), _ms=new THREE.Vector3(),
+      _mq=new THREE.Quaternion(), _m4=new THREE.Matrix4(), _bInv=new THREE.Matrix4(), _bp=new THREE.Vector3();
+function hashCell(ix,iy,iz){ return (((ix*92837111)^(iy*689287499)^(iz*283923481))>>>0) & (HASHSIZE-1); }
+
+function buildParticles(){
+  const geo=new THREE.IcosahedronGeometry(1,0);
+  const mat=new THREE.MeshStandardMaterial({roughness:1, metalness:0, flatShading:true, vertexColors:false});
+  pMesh=new THREE.InstancedMesh(geo, mat, PMAX);
+  pMesh.castShadow=false; pMesh.receiveShadow=true; pMesh.frustumCulled=false;
+  pMesh.count=0; scene.add(pMesh);
+  buildParticleColliders();
+}
+function buildParticleColliders(){
+  PWALLS=[
+    // bucket scoop: five solid walls, OPEN at the bottom (-Y, the teeth/mouth)
+    {a:bucketGrp, o:[0.31,-0.04,0],   h:[0.30,0.06,0.40]},   // closed top
+    {a:bucketGrp, o:[-0.02,-0.30,0],  h:[0.07,0.27,0.40]},   // back wall
+    {a:bucketGrp, o:[0.62,-0.30,0],   h:[0.07,0.27,0.40]},   // front wall
+    {a:bucketGrp, o:[0.31,-0.30,0.40],h:[0.32,0.27,0.06]},   // side +Z
+    {a:bucketGrp, o:[0.31,-0.30,-0.40],h:[0.32,0.27,0.06]},  // side -Z
+    // solid machine parts that shove material around
+    {a:dozerBladeMesh, o:[0,0,0],      h:[0.12,0.22,0.95]},  // dozer blade
+    {a:root,           o:[-0.2,0.75,0],h:[1.7,0.75,1.15]},   // body
+    {a:thumbGrp,       o:[1.05,0.08,0],h:[0.3,0.12,0.4]},    // thumb
+  ];
+  for(const W of PWALLS){ W.q=new THREE.Quaternion(); W.qi=new THREE.Quaternion();
+    W.c=new THREE.Vector3(); W.prev=null; W.vx=W.vy=W.vz=0; }
+}
+function refreshParticleColliders(dt){
+  for(const W of PWALLS){
+    W.a.updateWorldMatrix(true,false);
+    _pv.set(W.o[0],W.o[1],W.o[2]).applyMatrix4(W.a.matrixWorld);
+    W.a.getWorldQuaternion(W.q); W.qi.copy(W.q).invert();
+    if(W.prev){ const inv=1/Math.max(dt,1e-3); W.vx=(_pv.x-W.prev.x)*inv; W.vy=(_pv.y-W.prev.y)*inv; W.vz=(_pv.z-W.prev.z)*inv; }
+    else W.prev=new THREE.Vector3();
+    W.c.copy(_pv); W.prev.copy(_pv);
+  }
+}
+function activateParticle(x,y,z, vx,vy,vz, r,g,b){
+  if(pCount>=PMAX) return -1;
+  const i=pCount++, o=i*3;
+  pPos[o]=x; pPos[o+1]=y; pPos[o+2]=z;
+  pVel[o]=vx; pVel[o+1]=vy; pVel[o+2]=vz;
+  pScale[i]=PR*(0.85+Math.random()*0.4);
+  pMesh.setColorAt(i, _pcol.setRGB(r,g,b));
+  return i;
+}
+const _pcol=new THREE.Color();
+function spawnPile(cx,cz,n){
+  for(let i=0;i<n;i++){
+    const a=Math.random()*6.28, rr=Math.sqrt(Math.random())*1.5;
+    const x=cx+Math.cos(a)*rr, z=cz+Math.sin(a)*rr;
+    const y=HF.height(x,z)+PR + Math.random()*3.2;   // a loose column that settles into a heap
+    const t=0.55+Math.random()*0.22;                  // gravel/sand tones
+    activateParticle(x,y,z, 0,0,0, t, t*0.92, t*0.74);
+  }
+  if(pMesh.instanceColor) pMesh.instanceColor.needsUpdate=true;
+}
+function emitParticles(x,y,z,vol){           // carved terrain -> granular particles
+  _emitAcc += vol;
+  while(_emitAcc>=0.03 && pCount<PMAX){
+    _emitAcc-=0.03;
+    const a=Math.random()*6.28, rr=Math.random()*0.3;
+    const t=0.5+Math.random()*0.18;
+    const i=activateParticle(x+Math.cos(a)*rr, y+PR+Math.random()*0.15, z+Math.sin(a)*rr,
+      (Math.random()-0.5)*0.6, 0.5+Math.random()*0.6, (Math.random()-0.5)*0.6, t, t*0.85, t*0.62);
+    if(i>=0 && pMesh.instanceColor) pMesh.instanceColor.needsUpdate=true;
+  }
+}
+function updateParticles(dt){
+  if(!pMesh || pCount===0) return;
+  refreshParticleColliders(dt);
+  const mcx=RB.p.x, mcz=RB.p.z;                       // machine centre (broad-phase gate)
+  const sub=3, h=Math.min(0.02,dt)/sub;
+  for(let s=0;s<sub;s++){
+    // integrate
+    for(let i=0;i<pCount;i++){ const o=i*3; pVel[o+1]-=9.81*h;
+      pPos[o]+=pVel[o]*h; pPos[o+1]+=pVel[o+1]*h; pPos[o+2]+=pVel[o+2]*h; }
+    // spatial hash
+    cellHead.fill(-1);
+    for(let i=0;i<pCount;i++){ const o=i*3;
+      const hc=hashCell(Math.floor(pPos[o]*INV_PCELL),Math.floor(pPos[o+1]*INV_PCELL),Math.floor(pPos[o+2]*INV_PCELL));
+      pNext[i]=cellHead[hc]; cellHead[hc]=i; }
+    // particle-particle (27-cell neighbourhood, resolve each pair once)
+    const min=2*PR, min2=min*min;
+    for(let i=0;i<pCount;i++){ const oi=i*3;
+      const bx=Math.floor(pPos[oi]*INV_PCELL), by=Math.floor(pPos[oi+1]*INV_PCELL), bz=Math.floor(pPos[oi+2]*INV_PCELL);
+      for(let gx=-1;gx<=1;gx++)for(let gy=-1;gy<=1;gy++)for(let gz=-1;gz<=1;gz++){
+        let j=cellHead[hashCell(bx+gx,by+gy,bz+gz)];
+        while(j!==-1){ if(j>i){ const oj=j*3;
+          let nx=pPos[oi]-pPos[oj], ny=pPos[oi+1]-pPos[oj+1], nz=pPos[oi+2]-pPos[oj+2];
+          const d2=nx*nx+ny*ny+nz*nz;
+          if(d2<min2 && d2>1e-9){ const d=Math.sqrt(d2), inv=1/d; nx*=inv;ny*=inv;nz*=inv;
+            const corr=(min-d)*0.5;
+            pPos[oi]+=nx*corr; pPos[oi+1]+=ny*corr; pPos[oi+2]+=nz*corr;
+            pPos[oj]-=nx*corr; pPos[oj+1]-=ny*corr; pPos[oj+2]-=nz*corr;
+            let rvx=pVel[oi]-pVel[oj], rvy=pVel[oi+1]-pVel[oj+1], rvz=pVel[oi+2]-pVel[oj+2];
+            const rvn=rvx*nx+rvy*ny+rvz*nz;
+            if(rvn<0){ const imp=rvn*0.5;
+              pVel[oi]-=nx*imp; pVel[oi+1]-=ny*imp; pVel[oi+2]-=nz*imp;
+              pVel[oj]+=nx*imp; pVel[oj+1]+=ny*imp; pVel[oj+2]+=nz*imp;
+              const tvx=rvx-rvn*nx, tvy=rvy-rvn*ny, tvz=rvz-rvn*nz;
+              pVel[oi]-=tvx*PFRIC*0.5; pVel[oi+1]-=tvy*PFRIC*0.5; pVel[oi+2]-=tvz*PFRIC*0.5;
+              pVel[oj]+=tvx*PFRIC*0.5; pVel[oj+1]+=tvy*PFRIC*0.5; pVel[oj+2]+=tvz*PFRIC*0.5; } } }
+          j=pNext[j]; } }
+    }
+    // terrain + machine walls
+    for(let i=0;i<pCount;i++){ const o=i*3;
+      const gh=HF.height(pPos[o],pPos[o+2]);
+      if(pPos[o+1] < gh+PR){ pPos[o+1]=gh+PR; if(pVel[o+1]<0) pVel[o+1]=0; pVel[o]*=PGFRIC; pVel[o+2]*=PGFRIC; }
+      const dx=pPos[o]-mcx, dz=pPos[o+2]-mcz;
+      if(dx*dx+dz*dz < 20){ for(const W of PWALLS) collideParticleWall(o, W); }
+    }
+    // damping
+    for(let i=0;i<pCount;i++){ const o=i*3; pVel[o]*=0.997; pVel[o+1]*=0.999; pVel[o+2]*=0.997;
+      const sp=pVel[o]*pVel[o]+pVel[o+1]*pVel[o+1]+pVel[o+2]*pVel[o+2];
+      if(sp>900){ const f=30/Math.sqrt(sp); pVel[o]*=f; pVel[o+1]*=f; pVel[o+2]*=f; } }
+  }
+  // write instance matrices + count what's inside the bucket
+  bucketGrp.updateWorldMatrix(true,false); _bInv.copy(bucketGrp.matrixWorld).invert();
+  let inBucket=0;
+  for(let i=0;i<pCount;i++){ const o=i*3;
+    _pv.set(pPos[o],pPos[o+1],pPos[o+2]); _ms.set(pScale[i],pScale[i],pScale[i]);
+    _m4.compose(_pv,_mq,_ms); pMesh.setMatrixAt(i,_m4);
+    const dx=pPos[o]-mcx, dz=pPos[o+2]-mcz;
+    if(dx*dx+dz*dz<20){ _bp.copy(_pv).applyMatrix4(_bInv);
+      if(_bp.x>0.0&&_bp.x<0.62 && _bp.y>-0.58&&_bp.y<-0.06 && _bp.z>-0.37&&_bp.z<0.37) inBucket++; }
+  }
+  M.bucketLoad=inBucket;
+  pMesh.count=pCount; pMesh.instanceMatrix.needsUpdate=true;
+}
+function collideParticleWall(o, W){
+  _pv.set(pPos[o]-W.c.x, pPos[o+1]-W.c.y, pPos[o+2]-W.c.z).applyQuaternion(W.qi);   // particle in wall-local
+  const cx=clamp(_pv.x,-W.h[0],W.h[0]), cy=clamp(_pv.y,-W.h[1],W.h[1]), cz=clamp(_pv.z,-W.h[2],W.h[2]);
+  let dx=_pv.x-cx, dy=_pv.y-cy, dz=_pv.z-cz; const d2=dx*dx+dy*dy+dz*dz;
+  if(d2>=PR*PR) return;
+  let nx,ny,nz,pen;
+  if(d2>1e-9){ const d=Math.sqrt(d2); pen=PR-d; nx=dx/d;ny=dy/d;nz=dz/d; }
+  else { const ox=W.h[0]-Math.abs(_pv.x), oy=W.h[1]-Math.abs(_pv.y), oz=W.h[2]-Math.abs(_pv.z);
+    if(ox<oy&&ox<oz){nx=_pv.x>=0?1:-1;ny=0;nz=0;pen=PR+ox;}
+    else if(oy<oz){nx=0;ny=_pv.y>=0?1:-1;nz=0;pen=PR+oy;}
+    else {nx=0;ny=0;nz=_pv.z>=0?1:-1;pen=PR+oz;} }
+  _pn2.set(nx,ny,nz).applyQuaternion(W.q);                  // contact normal in world
+  pPos[o]+=_pn2.x*pen; pPos[o+1]+=_pn2.y*pen; pPos[o+2]+=_pn2.z*pen;
+  const rvx=pVel[o]-W.vx, rvy=pVel[o+1]-W.vy, rvz=pVel[o+2]-W.vz;
+  const rvn=rvx*_pn2.x+rvy*_pn2.y+rvz*_pn2.z;
+  if(rvn<0){ pVel[o]-=_pn2.x*rvn; pVel[o+1]-=_pn2.y*rvn; pVel[o+2]-=_pn2.z*rvn;   // match wall normal vel (carry)
+    const tvx=rvx-rvn*_pn2.x, tvy=rvy-rvn*_pn2.y, tvz=rvz-rvn*_pn2.z;
+    pVel[o]-=tvx*PWFRIC; pVel[o+1]-=tvy*PWFRIC; pVel[o+2]-=tvz*PWFRIC; }
+}
 
 /* =======================  MOBILE TOUCH DECK  ======================= */
 function makeVPad(padId, knobId, cb){
@@ -1440,11 +1796,27 @@ function init(){
 
   buildMachine();
   buildColliders();
+  buildParticles();          // granular DEM system (sand / gravel) + its collider walls
   // scattered dynamic rocks — collidable, can be pushed/rolled by the blade & bucket
-  for(let i=0;i<14;i++){ const a=Math.random()*6.28, rad=9+Math.random()*20;
+  for(let i=0;i<12;i++){ const a=Math.random()*6.28, rad=10+Math.random()*18;
     spawnRock(Math.cos(a)*rad, Math.sin(a)*rad, 0.22+Math.random()*0.3); }
   // a couple of small ones near the work area to grab with the thumb
   spawnRock(5.5, 1.2, 0.26); spawnRock(6.2,-1.6,0.3); spawnRock(4.8,-0.4,0.24);
+
+  // a real granular pile (sand/gravel) made of physics particles — scoop / carry / dump / spread
+  spawnPile(-9, 7, 2200);
+
+  // a felled tree, bucked into ~6ft (1.8m) sections lying along the trunk line, plus its stump
+  { const bx=12, bz=-9, dir=0.5, gap=4.7;
+    for(let i=0;i<6;i++){ const t=i-2.5;
+      const lx=bx+Math.cos(dir)*t*gap + (Math.random()-0.5)*0.5;
+      const lz=bz+Math.sin(dir)*t*gap + (Math.random()-0.5)*0.5;
+      makeLog(lx,lz, dir+(Math.random()-0.5)*0.45); }
+    addStump(bx-Math.cos(dir)*(3.0*gap), bz-Math.sin(dir)*(3.0*gap)); }
+
+  // scattered cinder blocks and old tyres
+  for(let i=0;i<6;i++){ const a=Math.random()*6.28, rad=8+Math.random()*8; makeBlock(Math.cos(a)*rad, Math.sin(a)*rad, Math.random()*6.28); }
+  for(let i=0;i<5;i++){ const a=Math.random()*6.28, rad=7+Math.random()*9; makeTire(Math.cos(a)*rad, Math.sin(a)*rad, Math.random()*6.28); }
   setupInput(); wireUI(); setupMobile();
   updateKeyUI();
   applyResponsive();
