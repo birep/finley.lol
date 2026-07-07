@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>finley.lol — games</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0f1220; --card:#1a1f36; --txt:#f2f4ff; --dim:#9aa3c7;
+    --glow1:#ffd21a; --glow2:#5bbcff;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    min-height:100vh; background:var(--bg); color:var(--txt);
+    font-family:'Fredoka',sans-serif;
+    background-image:
+      radial-gradient(circle at 15% 10%, rgba(91,188,255,.12), transparent 40%),
+      radial-gradient(circle at 85% 85%, rgba(255,210,26,.10), transparent 40%);
+  }
+  header{text-align:center; padding:48px 16px 28px;}
+  h1{font-size:clamp(36px,7vw,60px); font-weight:700; letter-spacing:1px;}
+  h1 .lol{color:var(--glow1);}
+  header p{color:var(--dim); font-size:clamp(14px,2.5vw,18px); margin-top:6px;}
+  main{
+    max-width:1080px; margin:0 auto; padding:0 16px 64px;
+    display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:20px;
+  }
+  .game{
+    display:block; text-decoration:none; color:inherit;
+    background:var(--card); border-radius:18px; overflow:hidden;
+    border:2px solid rgba(255,255,255,.06);
+    transition:transform .15s ease, border-color .15s ease, box-shadow .15s ease;
+  }
+  .game:hover, .game:focus-visible{
+    transform:translateY(-4px) scale(1.015);
+    border-color:var(--glow1);
+    box-shadow:0 12px 32px rgba(0,0,0,.45);
+  }
+  .shot{
+    position:relative; aspect-ratio:16/9; background:#0a0d18;
+    display:flex; align-items:center; justify-content:center; overflow:hidden;
+  }
+  .shot img{width:100%; height:100%; object-fit:cover; display:block;}
+  .shot .fallback{
+    position:absolute; inset:0; display:none; align-items:center; justify-content:center;
+    font-size:64px; background:linear-gradient(135deg,#232a4a,#141830);
+  }
+  .shot.noshot img{display:none;}
+  .shot.noshot .fallback{display:flex;}
+  .info{padding:14px 16px 16px;}
+  .info h2{font-size:20px; font-weight:600; display:flex; align-items:center; gap:8px;}
+  .info p{color:var(--dim); font-size:14px; line-height:1.45; margin-top:4px;}
+  footer{text-align:center; color:#565e82; font-size:12px; padding-bottom:28px;}
+</style>
+</head>
+<body>
+<header>
+  <h1>finley<span class="lol">.lol</span></h1>
+  <p>pick a game and play!</p>
+</header>
+
+<main>
+  <a class="game" href="https://miniex.finley.lol">
+    <div class="shot"><img src="https://miniex.finley.lol/shot_0.png" alt="Mini Excavator" loading="lazy"
+      onerror="this.parentNode.classList.add('noshot')"><div class="fallback">🚜</div></div>
+    <div class="info"><h2>🚜 Mini Excavator</h2>
+      <p>Climb into a RIPPA R10 mini excavator with real controls — start it up, dig holes, push sand, and grab rocks with the thumb.</p></div>
+  </a>
+
+  <a class="game" href="https://dinos.finley.lol">
+    <div class="shot"><img src="https://dinos.finley.lol/shot_0.png" alt="Volcano Escape" loading="lazy"
+      onerror="this.parentNode.classList.add('noshot')"><div class="fallback">🦕</div></div>
+    <div class="info"><h2>🦕 Volcano Escape</h2>
+      <p>Work together to help the dinos reach Safe Island before the volcano blows — and watch out for the T-Rex!</p></div>
+  </a>
+
+  <a class="game" href="https://horses.finley.lol">
+    <div class="shot"><img src="https://horses.finley.lol/shot_0.png" alt="Hay Runner" loading="lazy"
+      onerror="this.parentNode.classList.add('noshot')"><div class="fallback">🐴</div></div>
+    <div class="info"><h2>🐴 Hay Runner</h2>
+      <p>Carry hay bales to the hungry horses before the monsters catch you. Tap where you want to run!</p></div>
+  </a>
+
+  <a class="game" href="https://seamonsters.finley.lol">
+    <div class="shot"><img src="https://seamonsters.finley.lol/shot_0.png" alt="Sea Monsters" loading="lazy"
+      onerror="this.parentNode.classList.add('noshot')"><div class="fallback">🌊</div></div>
+    <div class="info"><h2>🌊 Sea Monsters</h2>
+      <p>Hay Runner by the sea — feed the horses while sea monsters prowl the shore.</p></div>
+  </a>
+
+  <a class="game" href="https://sandcastles.finley.lol">
+    <div class="shot"><img src="https://sandcastles.finley.lol/shot_0.png" alt="Sandcastle Defense" loading="lazy"
+      onerror="this.parentNode.classList.add('noshot')"><div class="fallback">🏰</div></div>
+    <div class="info"><h2>🏰 Sandcastle Defense</h2>
+      <p>Build towers of sand and defend your castle from wave after wave of the incoming tide.</p></div>
+  </a>
+
+  <a class="game" href="https://pandabamboo.finley.lol">
+    <div class="shot"><img src="https://pandabamboo.finley.lol/shot_0.png" alt="Panda World" loading="lazy"
+      onerror="this.parentNode.classList.add('noshot')"><div class="fallback">🐼</div></div>
+    <div class="info"><h2>🐼 Panda World</h2>
+      <p>Run around as a panda, munch bamboo, and play with your seahorse friend.</p></div>
+  </a>
+
+  <a class="game" href="https://unicornpass.finley.lol">
+    <div class="shot"><img src="https://unicornpass.finley.lol/shot_0.png" alt="Sparkle Dash" loading="lazy"
+      onerror="this.parentNode.classList.add('noshot')"><div class="fallback">🦄</div></div>
+    <div class="info"><h2>🦄 Sparkle Dash</h2>
+      <p>Gallop your unicorn down the rainbow lanes and pop every bubble you can catch.</p></div>
+  </a>
+</main>
+
+<footer>made with ❤ · finley.lol</footer>
+</body>
+</html>

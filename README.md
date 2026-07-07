@@ -6,15 +6,22 @@ Cloudflare Pages hosting for static HTML/Three.js games.
 
 ```
 finley.lol/
+├── home/                → finley.lol (landing page listing all games)
 ├── games/
 │   ├── horses/          → horses.finley.lol
 │   ├── sandcastles/     → sandcastles.finley.lol
 │   └── seamonsters/     → seamonsters.finley.lol
 ├── scripts/
 │   ├── deploy.sh        → Deploy a game (git + DNS + Pages)
+│   ├── deploy-home.sh   → Deploy the landing page to the apex domain
 │   └── new-game.sh      → Create a new game from template
 └── .cloudflare.env      → API credentials (copy from .example)
 ```
+
+Each game directory may contain screenshots named `shot_0.jpg` (and later
+`shot_1.jpg`, …). The landing page loads `https://<game>.finley.lol/shot_0.jpg`
+for its cards, so shots deploy with the game itself — no assets live in `home/`.
+If a shot is missing, the card shows an emoji placeholder instead.
 
 ## Setup (one-time)
 

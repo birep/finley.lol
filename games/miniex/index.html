@@ -197,7 +197,7 @@
   <div class="brand"><b>RIPPA R10</b><small>MINI EXCAVATOR · CONTROL TRAINER</small></div>
   <div class="lights">
     <div class="lamp"><span id="lampEng" class="dot eng"></span>ENGINE</div>
-    <div class="lamp"><span id="lampLock" class="dot lock on"></span>SAFETY LOCK</div>
+    <div class="lamp"><span id="lampLock" class="dot lock"></span>HYD LOCK</div>
     <div class="lamp"><span id="lampHyd" class="dot amber"></span>HYDRAULICS</div>
   </div>
 </div>
@@ -231,52 +231,52 @@
     <button id="kOn" data-k="1">CONTACT</button>
     <button id="kStart" data-k="2">START</button>
   </div>
-  <div class="secttl">Controls / switches</div>
-  <button class="btn" id="bLock">SAFETY LOCK LEVER <span class="st red" id="sLock">LOCKED</span></button>
+  <div class="secttl">Podium rockers</div>
+  <button class="btn" id="bLight">WORK LIGHTS <span class="st" id="sLight">OFF</span></button>
+  <button class="btn" id="bLock">HYDRAULIC LOCK <span class="st grn" id="sLock">OFF</span></button>
+  <button class="btn" id="bMode">DOZER LEVER <span class="st on" id="sMode">BLADE</span></button>
+  <div class="secttl">Other controls</div>
   <button class="btn" id="bSpeed">TRAVEL SPEED <span class="st" id="sSpeed">TURTLE</span></button>
-  <button class="btn" id="bStance">TRACK STANCE <span class="st on" id="sStance">WIDE</span></button>
-  <button class="btn" id="bThumb">HYDRAULIC THUMB <span class="st" id="sThumb">OPEN</span></button>
-  <button class="btn" id="bLight">WORK LIGHT <span class="st" id="sLight">OFF</span></button>
+  <button class="btn" id="bThumb">THUMB PEDAL <span class="st" id="sThumb">OPEN</span></button>
   <button class="btn" id="bHorn">HORN <span class="st" id="sHorn">—</span></button>
-  <div class="hint">Faithful to manual: hydraulics work only with the <b>engine running</b> and the <b>safety-lock lever released</b>. Lock the lever before mounting / dismounting.</div>
+  <div class="hint">Three rockers on the centre podium — all <b>forward</b> by default: lights off, hydraulic lock off, dozer lever moves the <b>blade</b>. Flip the third rocker back and the same lever adjusts <b>track width</b>. Hydraulics need the engine running and the lock rocker OFF.</div>
 </div>
 
 <div id="checklist">
   <h4>START PROCEDURE</h4>
-  <div class="chk" id="ck1"><span class="b"></span>Safety-lock lever → LOCKED</div>
-  <div class="chk" id="ck2"><span class="b"></span>Throttle → high (idle ok)</div>
-  <div class="chk" id="ck3"><span class="b"></span>Key → CONTACT</div>
-  <div class="chk" id="ck4"><span class="b"></span>Key → START (engine runs)</div>
-  <div class="chk" id="ck5"><span class="b"></span>Lock lever → RELEASED to operate</div>
+  <div class="chk" id="ck1"><span class="b"></span>Throttle → up (idle ok)</div>
+  <div class="chk" id="ck2"><span class="b"></span>Key → CONTACT</div>
+  <div class="chk" id="ck3"><span class="b"></span>Key → START (engine runs)</div>
+  <div class="chk" id="ck4"><span class="b"></span>Hydraulic-lock rocker → OFF</div>
 </div>
 
 <div id="legend">
   <div class="stick">
-    <h4>LEFT JOYSTICK <span>arm + swing</span></h4>
+    <h4>LEFT JOYSTICK <span>stick + swing</span></h4>
     <div class="cross">
       <div class="cell c"></div>
-      <div class="cell"><span class="k">I</span>STICK OUT</div>
+      <div class="cell"><span class="k">W</span>STICK OUT</div>
       <div class="cell c"></div>
-      <div class="cell"><span class="k">J</span>SWING L</div>
+      <div class="cell"><span class="k">A</span>SWING L</div>
       <div class="cell c">●</div>
-      <div class="cell"><span class="k">L</span>SWING R</div>
+      <div class="cell"><span class="k">D</span>SWING R</div>
       <div class="cell c"></div>
-      <div class="cell"><span class="k">K</span>STICK IN</div>
+      <div class="cell"><span class="k">S</span>STICK IN</div>
       <div class="cell c"></div>
     </div>
-    <div class="hint" style="margin-top:6px;">Hold <kbd>B</kbd> + <kbd>J</kbd>/<kbd>L</kbd> = boom offset swing</div>
+    <div class="hint" style="margin-top:6px;">Hold <kbd>B</kbd> + <kbd>A</kbd>/<kbd>D</kbd> = boom offset swing</div>
   </div>
   <div class="stick">
     <h4>RIGHT JOYSTICK <span>boom + bucket</span></h4>
     <div class="cross">
       <div class="cell c"></div>
-      <div class="cell"><span class="k">W</span>BOOM DOWN</div>
+      <div class="cell"><span class="k">I</span>BOOM DOWN</div>
       <div class="cell c"></div>
-      <div class="cell"><span class="k">A</span>BUCKET CURL</div>
+      <div class="cell"><span class="k">J</span>BUCKET CURL</div>
       <div class="cell c">●</div>
-      <div class="cell"><span class="k">D</span>BUCKET DUMP</div>
+      <div class="cell"><span class="k">L</span>BUCKET DUMP</div>
       <div class="cell c"></div>
-      <div class="cell"><span class="k">S</span>BOOM UP</div>
+      <div class="cell"><span class="k">K</span>BOOM UP</div>
       <div class="cell c"></div>
     </div>
     <div class="hint" style="margin-top:6px;">Per manual p.37 — ISO pattern</div>
@@ -285,12 +285,13 @@
     <h4>OTHER CONTROLS</h4>
     <div class="l"><span>Travel fwd / rev</span><b><kbd>↑</kbd><kbd>↓</kbd></b></div>
     <div class="l"><span>Spin left / right</span><b><kbd>←</kbd><kbd>→</kbd></b></div>
-    <div class="l"><span>Dozer raise / lower</span><b><kbd>R</kbd><kbd>F</kbd></b></div>
-    <div class="l"><span>Tracks wide / narrow</span><b><kbd>T</kbd><kbd>G</kbd></b></div>
-    <div class="l"><span>Thumb open / close</span><b><kbd>N</kbd></b></div>
+    <div class="l"><span>Dozer lever ▲ / ▼</span><b><kbd>R</kbd><kbd>F</kbd></b></div>
+    <div class="l"><span>Blade ↔ width mode</span><b><kbd>M</kbd></b></div>
+    <div class="l"><span>Thumb pedal (L foot)</span><b><kbd>N</kbd></b></div>
     <div class="l"><span>Throttle − / +</span><b><kbd>-</kbd><kbd>=</kbd></b></div>
     <div class="l"><span>Travel speed hi/lo</span><b><kbd>V</kbd></b></div>
-    <div class="l"><span>Safety lock</span><b><kbd>X</kbd></b></div>
+    <div class="l"><span>Hydraulic lock</span><b><kbd>X</kbd></b></div>
+    <div class="l"><span>Work lights</span><b><kbd>O</kbd></b></div>
     <div class="l"><span>Horn</span><b><kbd>Z</kbd></b></div>
     <div class="l"><span>Reset machine</span><b><kbd>P</kbd></b></div>
     <div class="l" style="border:none;"><span>Camera view</span><b><kbd>C</kbd></b></div>
@@ -306,7 +307,7 @@
 <div id="mdeck">
   <div class="mchips">
     <button class="mchip" id="mKey">START ENGINE</button>
-    <button class="mchip red" id="mLock">LOCK: ON</button>
+    <button class="mchip grn" id="mLock">LOCK: OFF</button>
     <button class="mchip" id="mSpeed">TURTLE</button>
     <button class="mchip on" id="mStance">TRACKS WIDE</button>
     <button class="mchip" id="mThumb">THUMB: OPEN</button>
@@ -347,7 +348,7 @@
   <p>A faithful practice rig for the R10 mini-excavator controls — built from the operator's manual.
      Learn the ISO joystick pattern, the dozer lever, travel levers &amp; pedals, throttle and starter sequence
      before you climb onto the real machine.</p>
-  <p style="color:var(--safe);">Starts in <b>external view</b> — press <b>C</b> (or FIRST-PERSON) to climb into the seat. <b>Drag a lever to operate it</b>, or use the keyboard. Right-drag (or two-finger) looks around.</p>
+  <p style="color:var(--safe);">Starts in <b>external view</b> — press <b>C</b> (or FIRST-PERSON) to climb into the seat. <b>Drag a lever to operate it</b>, or use the keyboard. In the cab, drag any empty space to look around.</p>
   <button id="startBtn">ENTER CAB</button>
   <div class="credit">SIM ONLY · NOT A SUBSTITUTE FOR CERTIFIED TRAINING</div>
 </div>
@@ -357,10 +358,12 @@
 /* ============================================================
    RIPPA R10 Mini-Excavator Control Trainer
    Control scheme transcribed from the R10 operator's manual:
-   - Right joystick: fwd=boom down, back=boom up, left=bucket curl, right=bucket dump
-   - Left  joystick: fwd=stick out, back=stick in, left=swing left, right=swing right
+   - Right joystick (IJKL): fwd=boom down, back=boom up, left=bucket curl, right=bucket dump
+   - Left  joystick (WASD): fwd=stick out, back=stick in, left=swing left, right=swing right
    - Hold boom-swing button: left/right reassigned to boom offset swing
-   - Two travel levers/pedals (differential), dozer lever, throttle, key switch, safety lock
+   - Two travel levers/pedals (differential), dozer lever, throttle, key switch
+   - Centre-podium rockers: work lights / hydraulic lock / dozer-lever mode (blade vs track width)
+   - Hydraulic thumb on a left-foot pedal
 ============================================================ */
 
 let scene, camera, renderer, clock;
@@ -376,7 +379,8 @@ const M = {
   bucketLoad:0,   // # of granular particles currently inside the bucket (for HUD)
   // engine
   key:0, keyMax:0, engineOn:false, rpm:0, throttle:0.0,
-  locked:true, speedHi:false, preheat:false, light:false,
+  locked:false, speedHi:false, preheat:false, light:false,
+  bladeMode:true,   // rocker 3: true = dozer lever moves blade, false = adjusts track width
   stance:1, stanceTarget:1,   // 0 = tracks narrow (retracted), 1 = wide (expanded)
   trackL:0, trackR:0,
 };
@@ -461,12 +465,13 @@ function buildMachine(){
   undercar.add(box(2.7,0.42,1.4,MAT.chassis(),0,0.78,0));
   undercar.add(box(2.2,0.18,1.7,MAT.chassis(),0,1.0,0));
 
-  // dozer blade at FRONT (+X) — small, like the real R10 (~track width, low profile)
+  // dozer blade at FRONT (+X) — spans the full track width at wide stance
+  // (the real blade has fold-in wings for narrow stance; not modelled here)
   dozerGrp=new THREE.Group(); dozerGrp.position.set(1.5,0.32,0); undercar.add(dozerGrp);
-  const arm1=box(0.7,0.09,0.10,MAT.chassis(),0.35,0,0.45); dozerGrp.add(arm1);
-  const arm2=box(0.7,0.09,0.10,MAT.chassis(),0.35,0,-0.45); dozerGrp.add(arm2);
-  const blade=box(0.14,0.34,1.85,MAT.body(),0.7,0.02,0); dozerGrp.add(blade); dozerBladeMesh=blade;
-  const bedge=box(0.07,0.12,1.85,MAT.dark(),0.74,-0.18,0); dozerGrp.add(bedge);
+  const arm1=box(0.7,0.09,0.10,MAT.chassis(),0.35,0,0.62); dozerGrp.add(arm1);
+  const arm2=box(0.7,0.09,0.10,MAT.chassis(),0.35,0,-0.62); dozerGrp.add(arm2);
+  const blade=box(0.14,0.34,2.95,MAT.body(),0.7,0.02,0); dozerGrp.add(blade); dozerBladeMesh=blade;
+  const bedge=box(0.07,0.12,2.95,MAT.dark(),0.74,-0.18,0); dozerGrp.add(bedge);
 
   /* ---------- HOUSE (upper structure, swings) ---------- */
   house=new THREE.Group(); house.position.set(0,1.12,0); root.add(house);
@@ -483,8 +488,8 @@ function buildMachine(){
   buildCanopy(house);
   buildSeatAndConsoles(house);
 
-  /* ---------- BOOM SWING (offset pivot at front of house) ---------- */
-  boomSwing=new THREE.Group(); boomSwing.position.set(1.15,0.18,0); house.add(boomSwing);
+  /* ---------- BOOM SWING (offset pivot at front of house, past the floor edge) ---------- */
+  boomSwing=new THREE.Group(); boomSwing.position.set(1.45,0.05,0); house.add(boomSwing);
   // king post
   boomSwing.add(box(0.4,0.7,0.5,MAT.bodyDk(),0,0.35,0));
 
@@ -541,14 +546,14 @@ function makeCylinder(len, barrelMat, rodMat){
 
 function buildCanopy(house){
   const postMat=MAT.bodyDk();
-  const posts=[[0.05,-0.78],[0.05,0.78],[-1.0,-0.78],[-1.0,0.78]];
+  // front posts at the front edge of the floor, roof covering the whole operator station
+  const posts=[[1.25,-0.72],[1.25,0.72],[-1.05,-0.78],[-1.05,0.78]];
   posts.forEach(([x,z])=>{ const p=cyl(0.07,0.07,2.4,postMat,8); p.position.set(x,1.3,z); house.add(p);});
-  // roof
-  const roof=box(1.9,0.12,2.0,MAT.body(),-0.45,2.55,0); house.add(roof);
-  house.add(box(2.0,0.05,2.1,MAT.bodyDk(),-0.45,2.62,0));
+  const roof=box(2.75,0.12,2.0,MAT.body(),0.12,2.55,0); house.add(roof);
+  house.add(box(2.85,0.05,2.1,MAT.bodyDk(),0.12,2.62,0));
   // work lights on roof front
-  workLightA=mkLamp(); workLightA.grp.position.set(0.55,2.45,0.7); house.add(workLightA.grp);
-  workLightB=mkLamp(); workLightB.grp.position.set(0.55,2.45,-0.7); house.add(workLightB.grp);
+  workLightA=mkLamp(); workLightA.grp.position.set(1.3,2.45,0.6); house.add(workLightA.grp);
+  workLightB=mkLamp(); workLightB.grp.position.set(1.3,2.45,-0.6); house.add(workLightB.grp);
 }
 function mkLamp(){
   const grp=new THREE.Group();
@@ -561,66 +566,105 @@ function mkLamp(){
 }
 
 function buildSeatAndConsoles(house){
-  // -------- SEAT (operator faces +X / front) --------
-  const seat=new THREE.Group(); seat.position.set(0.2,0.32,0); house.add(seat);
-  seat.add(box(0.62,0.12,0.62,MAT.seat(),0,0.0,0));      // cushion
-  seat.add(box(0.12,0.62,0.62,MAT.seat(),-0.32,0.35,0)); // back
-  // -------- LEFT CONSOLE (operator's left = +Z) --------
-  const lc=new THREE.Group(); lc.position.set(0.45,0.30,0.62); house.add(lc);
-  lc.add(box(0.55,0.18,0.42,MAT.chassis(),0,0,0));
-  // safety lock lever (left front of left console) — pivots about Z; up=LOCKED
-  ctl.lock = mkLever(0.55, MAT.red(), MAT.knob());
-  ctl.lock.group.position.set(0.30,0.05,0.20); lc.add(ctl.lock.group);
-  ctl.lock.kind='lock';
-  // LEFT JOYSTICK
+  // -------- SEAT: perched fully on top of the engine bay, like the real machine --------
+  const seat=new THREE.Group(); seat.position.set(-0.45,1.04,0); house.add(seat);
+  seat.add(box(0.42,0.14,0.40,MAT.dark(),0,0.0,0));            // suspension base on the hood
+  seat.add(box(0.60,0.15,0.58,MAT.seat(),0.02,0.14,0));        // cushion
+  seat.add(box(0.56,0.06,0.10,MAT.seat(),0.04,0.20,0.28));     // cushion bolster L
+  seat.add(box(0.56,0.06,0.10,MAT.seat(),0.04,0.20,-0.28));    // cushion bolster R
+  const back=new THREE.Group(); back.position.set(-0.27,0.20,0); back.rotation.z=0.14; seat.add(back);
+  back.add(box(0.14,0.74,0.52,MAT.seat(),0,0.37,0));           // backrest
+  back.add(box(0.10,0.58,0.10,MAT.seat(),0.05,0.34,0.27));     // back bolster L
+  back.add(box(0.10,0.58,0.10,MAT.seat(),0.05,0.34,-0.27));    // back bolster R
+  back.add(box(0.12,0.20,0.32,MAT.seat(),0.01,0.87,0));        // headrest
+
+  // -------- PILOT STANDS flanking the seat, consoles at cushion height --------
+  // (operator faces +X, so operator-left is -Z and operator-right is +Z)
+  // LEFT (-Z): tank console with gauges, left joystick + throttle on top
+  const ls=new THREE.Group(); ls.position.set(-0.10,0,-0.56); house.add(ls);
+  ls.add(box(0.44,0.74,0.36,MAT.dark(),-0.02,0.48,0.02));      // tank body
+  const g1=cyl(0.055,0.055,0.03,MAT.steel(),12); g1.rotation.z=Math.PI/2; g1.position.set(-0.25,0.70,0.09); ls.add(g1);
+  const g2=cyl(0.055,0.055,0.03,MAT.steel(),12); g2.rotation.z=Math.PI/2; g2.position.set(-0.25,0.70,-0.05); ls.add(g2);
+  ls.add(box(0.50,0.12,0.44,MAT.chassis(),0,0.92,0));          // console top
   ctl.left = mkJoystick();
-  ctl.left.group.position.set(0.0,0.09,0.0); lc.add(ctl.left.group);
+  ctl.left.group.position.set(0.06,0.98,-0.06); ls.add(ctl.left.group);
   ctl.left.kind='left';
-  // -------- RIGHT CONSOLE (operator's right = -Z) --------
-  const rc=new THREE.Group(); rc.position.set(0.45,0.30,-0.62); house.add(rc);
-  rc.add(box(0.55,0.18,0.42,MAT.chassis(),0,0,0));
-  // RIGHT JOYSTICK
-  ctl.right = mkJoystick();
-  ctl.right.group.position.set(-0.02,0.09,0.0); rc.add(ctl.right.group);
-  ctl.right.kind='right';
-  // DOZER lever (right console, outboard front)
-  ctl.dozer = mkLever(0.6, MAT.amber(), MAT.knob());
-  ctl.dozer.group.position.set(0.24,0.05,-0.17); rc.add(ctl.dozer.group);
-  ctl.dozer.kind='dozer'; ctl.dozer.axis='x';
-  // THROTTLE knob/lever (right console rear)
-  ctl.throttle = mkLever(0.5, MAT.knob(), MAT.amber());
-  ctl.throttle.group.position.set(-0.22,0.05,-0.17); rc.add(ctl.throttle.group);
+  ctl.throttle = mkLever(0.34, MAT.knob(), MAT.amber());
+  ctl.throttle.group.position.set(-0.17,0.98,0.11); ls.add(ctl.throttle.group);
   ctl.throttle.kind='throttle'; ctl.throttle.axis='x';
-  // KEY switch (small dash on right console front)
-  const dash=box(0.3,0.2,0.28,MAT.dark(),0.28,0.1,0.12); rc.add(dash);
-  ctl.key = mkKey(); ctl.key.group.position.set(0.40,0.18,0.12); rc.add(ctl.key.group);
+  // RIGHT (+Z): joystick stand with dozer lever + key switch
+  const rs=new THREE.Group(); rs.position.set(-0.10,0,0.56); house.add(rs);
+  rs.add(box(0.28,0.86,0.28,MAT.dark(),0,0.44,0));             // pedestal column
+  rs.add(box(0.50,0.12,0.44,MAT.chassis(),0,0.92,0));          // console top
+  ctl.right = mkJoystick();
+  ctl.right.group.position.set(0.02,0.98,0.06); rs.add(ctl.right.group);
+  ctl.right.kind='right';
+  ctl.dozer = mkLever(0.42, MAT.dark(), MAT.amber());
+  ctl.dozer.group.position.set(0.16,0.98,-0.14); rs.add(ctl.dozer.group);
+  ctl.dozer.kind='dozer'; ctl.dozer.axis='x';
+  ctl.key = mkKey(); ctl.key.group.position.set(-0.18,0.98,-0.13); rs.add(ctl.key.group);
   ctl.key.kind='key';
 
-  // -------- TRAVEL LEVERS (two, center front) + PEDALS --------
-  const tv=new THREE.Group(); tv.position.set(0.95,0.18,0); house.add(tv);
-  tv.add(box(0.45,0.14,0.9,MAT.chassis(),0,0,0));
-  ctl.travL=mkLever(0.62,MAT.dark(),MAT.amber()); ctl.travL.group.position.set(0,0.05,0.22); tv.add(ctl.travL.group);
+  // -------- FRONT PEDESTAL right under the canopy front: travel levers + 3 rockers, up high --------
+  const fp=new THREE.Group(); fp.position.set(1.02,0.06,0); house.add(fp);
+  fp.add(box(0.24,0.86,0.40,MAT.chassis(),0,0.43,0));          // column
+  fp.add(box(0.36,0.10,0.58,MAT.chassis(),0,0.90,0));          // head
+  ctl.travL=mkLever(0.52,MAT.dark(),MAT.knob()); ctl.travL.group.position.set(0,0.95,-0.15); fp.add(ctl.travL.group);
   ctl.travL.kind='travel'; ctl.travL.axis='x'; ctl.travL.side='L';
-  ctl.travR=mkLever(0.62,MAT.dark(),MAT.amber()); ctl.travR.group.position.set(0,0.05,-0.22); tv.add(ctl.travR.group);
+  ctl.travR=mkLever(0.52,MAT.dark(),MAT.knob()); ctl.travR.group.position.set(0,0.95,0.15); fp.add(ctl.travR.group);
   ctl.travR.kind='travel'; ctl.travR.axis='x'; ctl.travR.side='R';
-  // pedals at floor level in front of levers
-  ctl.pedL=mkPedal(); ctl.pedL.group.position.set(1.35,0.10,0.22); house.add(ctl.pedL.group); ctl.pedL.kind='pedal'; ctl.pedL.side='L';
-  ctl.pedR=mkPedal(); ctl.pedR.group.position.set(1.35,0.10,-0.22); house.add(ctl.pedR.group); ctl.pedR.kind='pedal'; ctl.pedR.side='R';
+  // rocker strip on the operator side of the head, angled back toward the seat
+  const rp=new THREE.Group(); rp.position.set(-0.24,0.82,0); rp.rotation.z=0.6; fp.add(rp);
+  rp.add(box(0.20,0.05,0.58,MAT.dark(),0,-0.02,0));
+  // left→right from the seat: lights / hydraulic lock / blade-vs-width
+  const blue=new THREE.MeshStandardMaterial({color:0x5bbcff, roughness:.5});
+  ctl.rockLight=mkRocker(MAT.amber()); ctl.rockLight.group.position.set(0,0,-0.18); rp.add(ctl.rockLight.group);
+  ctl.rockLight.kind='rocker'; ctl.rockLight.fire=()=>toggleLight(); ctl.rockLight.state=()=>M.light;
+  ctl.rockLock=mkRocker(MAT.red()); ctl.rockLock.group.position.set(0,0,0); rp.add(ctl.rockLock.group);
+  ctl.rockLock.kind='rocker'; ctl.rockLock.fire=()=>toggleLock(); ctl.rockLock.state=()=>M.locked;
+  ctl.rockMode=mkRocker(blue); ctl.rockMode.group.position.set(0,0,0.18); rp.add(ctl.rockMode.group);
+  ctl.rockMode.kind='rocker'; ctl.rockMode.fire=()=>toggleMode(); ctl.rockMode.state=()=>!M.bladeMode;
+
+  // -------- PEDALS on the floor: travel pair beside the pedestal + thumb (left foot) --------
+  ctl.pedL=mkPedal(); ctl.pedL.group.position.set(1.26,0.10,-0.38); house.add(ctl.pedL.group); ctl.pedL.kind='pedal'; ctl.pedL.side='L';
+  ctl.pedR=mkPedal(); ctl.pedR.group.position.set(1.26,0.10,0.38); house.add(ctl.pedR.group); ctl.pedR.kind='pedal'; ctl.pedR.side='R';
+  ctl.pedT=mkPedal(); ctl.pedT.group.position.set(1.26,0.10,-0.72); house.add(ctl.pedT.group);
+  ctl.pedT.kind='thumbped';
 }
 
-// joystick: base + shaft + ball + side button (boom swing)
+// joystick: mounting plate + pleated rubber bellows + contoured pilot grip (like the real machine)
 function mkJoystick(){
   const group=new THREE.Group();
-  const base=cyl(0.13,0.16,0.08,MAT.dark(),16); base.position.y=0.04; group.add(base);
-  const pivot=new THREE.Group(); pivot.position.y=0.07; group.add(pivot);
-  const boot=cyl(0.07,0.11,0.12,new THREE.MeshStandardMaterial({color:0x111,roughness:1}),12); boot.position.y=0.06; pivot.add(boot);
-  const shaft=cyl(0.035,0.04,0.34,MAT.knob(),10); shaft.position.y=0.27; pivot.add(shaft);
-  const ball=sph(0.085,MAT.knob()); ball.position.y=0.46; pivot.add(ball);
-  const btn=box(0.04,0.04,0.05,MAT.amber(),0.07,0.44,0); pivot.add(btn);
-  // make the whole thing pickable: tag meshes
-  [base,boot,shaft,ball,btn].forEach(m=>m.userData.pick=true);
+  const rub=new THREE.MeshStandardMaterial({color:0x0d0d0d, roughness:.95});
+  const plate=box(0.18,0.03,0.18,MAT.dark(),0,0.015,0); group.add(plate);
+  const pivot=new THREE.Group(); pivot.position.y=0.03; group.add(pivot);
+  // bellows boot: stacked tapering pleats
+  const b1=box(0.150,0.05,0.150,rub,0,0.028,0); pivot.add(b1);
+  const b2=box(0.118,0.05,0.118,rub,0,0.080,0); pivot.add(b2);
+  const b3=box(0.090,0.05,0.090,rub,0,0.132,0); pivot.add(b3);
+  const shaft=cyl(0.020,0.024,0.15,MAT.steel(),10); shaft.position.y=0.225; pivot.add(shaft);
+  // grip: waisted handle with a palm swell, raked slightly toward the operator
+  const grip=new THREE.Group(); grip.position.y=0.30; grip.rotation.z=0.14; pivot.add(grip);
+  const gLow=cyl(0.038,0.033,0.13,MAT.knob(),12); gLow.position.y=0.05; grip.add(gLow);
+  const gPalm=cyl(0.049,0.040,0.11,MAT.knob(),12); gPalm.position.y=0.165; grip.add(gPalm);
+  const gTop=sph(0.049,MAT.knob()); gTop.scale.y=0.68; gTop.position.y=0.225; grip.add(gTop);
+  const btn=cyl(0.013,0.013,0.02,MAT.amber(),8); btn.rotation.z=Math.PI/2;
+  btn.position.set(0.048,0.24,0); grip.add(btn);   // boom-swing thumb button
+  const parts=[plate,b1,b2,b3,shaft,gLow,gPalm,gTop,btn];
+  parts.forEach(m=>m.userData.pick=true);
   const gz=grabZone(0.34,0.85,0.34,0,0.4,0); group.add(gz);
-  return {group, pivot, ball, hit:[gz,base,boot,shaft,ball,btn]};
+  return {group, pivot, hit:[gz,...parts]};
+}
+// small rocker switch: bezel + tilting cap + coloured id stripe. fire() toggles, state() reads.
+function mkRocker(tagMat){
+  const group=new THREE.Group();
+  const bez=box(0.11,0.025,0.155,MAT.dark(),0,0.012,0); group.add(bez);
+  const pivot=new THREE.Group(); pivot.position.y=0.032; group.add(pivot);
+  const cap=box(0.075,0.03,0.115,MAT.knob(),0,0.012,0); pivot.add(cap);
+  const nub=box(0.026,0.034,0.10,tagMat,0.026,0.013,0); pivot.add(nub);   // id stripe on the front half
+  [bez,cap,nub].forEach(m=>m.userData.pick=true);
+  const gz=grabZone(0.15,0.16,0.19,0,0.05,0); group.add(gz);
+  return {group, pivot, hit:[gz,bez,cap,nub]};
 }
 // generic single-axis lever
 function mkLever(len, shaftMat, knobMat){
@@ -667,9 +711,9 @@ function applyPose(){
   // tracks visual roll handled by texture-free; skip
   aimCylinders();
   // lever visuals
-  setLeverTilt(ctl.dozer, M.dozer/0.45*0.5);
+  setLeverTilt(ctl.dozer, M.bladeMode ? M.dozer/0.45*0.5 : CMD.dozer*0.5);
   setLeverTilt(ctl.throttle, (M.throttle-0.5)*0.9);
-  setLockVisual();
+  setRockerVisuals();
   setKeyVisual();
   // joystick visual = command
   if(ctl.left)  setJoyTilt(ctl.left,  CMD.swingX, CMD.stickY);
@@ -678,20 +722,22 @@ function applyPose(){
   setLeverTilt(ctl.travR, CMD.travR*0.6);
   setPedalTilt(ctl.pedL, CMD.travL);
   setPedalTilt(ctl.pedR, CMD.travR);
+  setPedalTilt(ctl.pedT, (M.thumb-0.5)*2);
   // work light
   const li = M.light ? 1.1 : 0;
   if(workLightA){ workLightA.light.intensity=li; workLightB.light.intensity=li;
     const e = M.light?0xffcc66:0x000000;
     workLightA.lens.material.emissive.setHex(e); workLightB.lens.material.emissive.setHex(e);}
 }
-function setJoyTilt(j,x,y){ // x: +right tilts toward -Z (operator right) ; y:+fwd tilts +X
+function setJoyTilt(j,x,y){ // x: +right tilts toward +Z (operator right) ; y: +fwd tilts +X
   j.pivot.rotation.z = -y*0.32;
   j.pivot.rotation.x = x*0.32;
 }
 function setLeverTilt(l,t){ if(l) l.pivot.rotation.z=-t; }
 function setPedalTilt(p,t){ if(p) p.pivot.rotation.z=-t*0.25; }
-function setLockVisual(){ // locked = up (rotation 0), released = forward-down
-  if(ctl.lock) ctl.lock.pivot.rotation.z = M.locked ? 0 : -0.9;
+function setRockerVisuals(){ // rocker forward (-z tilt) = default OFF; back = engaged
+  for(const r of [ctl.rockLight, ctl.rockLock, ctl.rockMode])
+    if(r) r.pivot.rotation.z = r.state() ? 0.3 : -0.3;
 }
 function setKeyVisual(){ if(ctl.key) ctl.key.pivot.rotation.z = -M.key*0.5; }
 
@@ -725,7 +771,7 @@ function aimCyl(cobj, fromObj, fromLocal, toObj, toLocal){
 /* =======================  CAMERA  ======================= */
 const cam = { theta:-0.7, phi:0.95, dist:13 };   // external orbit
 const fpv = { yaw:0, pitch:-0.34 };              // first-person look offsets (house-local)
-const _eyeL=new THREE.Vector3(-0.05,1.46,0);     // seated eye, house-local
+const _eyeL=new THREE.Vector3(-0.32,2.0,0);      // seated eye above the engine-bay seat, house-local
 function updateCamera(){
   const wantFov = (view==='fpv') ? 86 : 55;
   if(camera.fov !== wantFov){ camera.fov = wantFov; camera.updateProjectionMatrix(); }
@@ -757,8 +803,8 @@ function setupInput(){
     if(k==='b') boomSwingMod=true;
     if(k==='x') toggleLock();
     if(k==='v') toggleSpeed();
-    if(k==='t') M.stanceTarget=1;
-    if(k==='g') M.stanceTarget=0;
+    if(k==='o') toggleLight();
+    if(k==='m') toggleMode();
     if(k==='n') M.thumbTarget = M.thumbTarget>0.5?0:1;
     if(k==='z') horn();
     if(k==='c') setView(view==='orbit'?'fpv':'orbit');
@@ -788,8 +834,8 @@ function setupInput(){
     Object.values(ctl).forEach(c=>{ if(c&&c.hit) c.hit.forEach(m=>{m.userData._ctl=c; all.push(m);}); });
     const hits=ray.intersectObjects(all,false);
     if(!hits.length) return null;
-    // discrete toggles (lock, key) take priority if the ray passes through them at all
-    for(const h of hits){ const c=h.object.userData._ctl; if(c && (c.kind==='lock'||c.kind==='key')) return c; }
+    // discrete toggles (rockers, key) take priority if the ray passes through them at all
+    for(const h of hits){ const c=h.object.userData._ctl; if(c && (c.kind==='rocker'||c.kind==='key')) return c; }
     return hits[0].object.userData._ctl;
   }
   dom.addEventListener('contextmenu', e=>e.preventDefault());
@@ -802,11 +848,10 @@ function setupInput(){
     const c=pick(ev);
     if(c){ dragCtl=c; lastX=ev.clientX; lastY=ev.clientY;
       if(c.kind==='key'){ cycleKey(); dragCtl=null; }
-      if(c.kind==='lock'){ toggleLock(); dragCtl=null; }
+      if(c.kind==='rocker'){ c.fire(); dragCtl=null; }
       dom.setPointerCapture(ev.pointerId);
     } else if(view==='orbit'){ dragOrbit=true; lastX=ev.clientX; lastY=ev.clientY; dom.setPointerCapture(ev.pointerId); }
-    else if(ev.pointerType==='touch'){ dragLook=true; lastX=ev.clientX; lastY=ev.clientY; dom.setPointerCapture(ev.pointerId); }
-    // (mouse left-click on empty space in first-person does nothing — no accidental camera spin)
+    else { dragLook=true; lastX=ev.clientX; lastY=ev.clientY; dom.setPointerCapture(ev.pointerId); }  // FPV: drag empty space to look around
   });
   dom.addEventListener('pointermove', ev=>{
     if(dragOrbit){
@@ -815,8 +860,8 @@ function setupInput(){
       lastX=ev.clientX; lastY=ev.clientY; return;
     }
     if(dragLook){
-      fpv.yaw   = Math.max(-1.5, Math.min(1.5, fpv.yaw - (ev.clientX-lastX)*0.004));
-      fpv.pitch = Math.max(-1.25, Math.min(0.45, fpv.pitch - (ev.clientY-lastY)*0.004));
+      fpv.yaw   = Math.max(-2.9, Math.min(2.9, fpv.yaw - (ev.clientX-lastX)*0.004));   // can look over either shoulder
+      fpv.pitch = Math.max(-1.25, Math.min(0.6, fpv.pitch - (ev.clientY-lastY)*0.004));
       lastX=ev.clientX; lastY=ev.clientY; return;
     }
     if(!dragCtl) return;
@@ -838,6 +883,7 @@ function applyDrag(c,dx,dy){
   else if(c.kind==='throttle'){ M.throttle = clamp(M.throttle - dy*0.05,0,1); }
   else if(c.kind==='travel'){ if(c.side==='L') dragHold.travL=clamp(-dy,-1,1); else dragHold.travR=clamp(-dy,-1,1); }
   else if(c.kind==='pedal'){ if(c.side==='L') dragHold.travL=clamp(-dy,-1,1); else dragHold.travR=clamp(-dy,-1,1); }
+  else if(c.kind==='thumbped'){ M.thumbTarget = clamp(M.thumbTarget - dy*0.05, 0, 1); }  // toe-down = clamp closed
 }
 function clamp(v,a,b){return Math.max(a,Math.min(b,v));}
 
@@ -858,10 +904,17 @@ function updateKeyUI(){
   document.getElementById('kStart').classList.toggle('act',false);
 }
 function toggleLock(){ M.locked=!M.locked;
-  document.getElementById('sLock').textContent=M.locked?'LOCKED':'RELEASED';
+  document.getElementById('sLock').textContent=M.locked?'ON':'OFF';
   document.getElementById('sLock').className='st '+(M.locked?'red':'grn');
   document.getElementById('lampLock').classList.toggle('on',M.locked);
-  toast(M.locked?'Safety lock ENGAGED — hydraulics disabled':'Safety lock RELEASED — ready to operate');
+  toast(M.locked?'Hydraulic lock ON — hydraulics disabled':'Hydraulic lock OFF — ready to operate');
+}
+function toggleLight(){ M.light=!M.light;
+  const s=document.getElementById('sLight'); s.textContent=M.light?'ON':'OFF'; s.className='st '+(M.light?'on':'');
+}
+function toggleMode(){ M.bladeMode=!M.bladeMode;
+  const s=document.getElementById('sMode'); s.textContent=M.bladeMode?'BLADE':'WIDTH'; s.className='st '+(M.bladeMode?'on':'');
+  toast(M.bladeMode?'Dozer lever → blade raise / lower':'Dozer lever → track width out / in');
 }
 function toggleSpeed(){ M.speedHi=!M.speedHi;
   const s=document.getElementById('sSpeed'); s.textContent=M.speedHi?'RABBIT':'TURTLE'; s.className='st '+(M.speedHi?'on':''); }
@@ -885,11 +938,11 @@ function setView(v){ view=v;
 function gatherCommands(){
   // keyboard contributions
   let boomY=0,bktX=0,stickY=0,swingX=0,offX=0,dozer=0,travL=0,travR=0;
-  if(keys['w']) boomY+=1; if(keys['s']) boomY-=1;      // fwd=boom down
-  if(keys['a']) bktX-=1; if(keys['d']) bktX+=1;
-  if(keys['i']) stickY+=1; if(keys['k']) stickY-=1;
-  if(boomSwingMod){ if(keys['j']) offX-=1; if(keys['l']) offX+=1; }
-  else { if(keys['j']) swingX-=1; if(keys['l']) swingX+=1; }
+  if(keys['w']) stickY+=1; if(keys['s']) stickY-=1;    // left stick fwd = stick out
+  if(boomSwingMod){ if(keys['a']) offX-=1; if(keys['d']) offX+=1; }
+  else { if(keys['a']) swingX-=1; if(keys['d']) swingX+=1; }
+  if(keys['i']) boomY+=1; if(keys['k']) boomY-=1;      // right stick fwd = boom down
+  if(keys['j']) bktX-=1; if(keys['l']) bktX+=1;
   if(keys['r']) dozer+=1; if(keys['f']) dozer-=1;
   if(keys['arrowup']){travL+=1;travR+=1;} if(keys['arrowdown']){travL-=1;travR-=1;}
   if(keys['arrowleft']){travL-=1;travR+=1;} if(keys['arrowright']){travL+=1;travR-=1;}
@@ -921,9 +974,12 @@ function step(dt){
     M.boom  = clamp(M.boom  - CMD.boomY*rate*tf*dt, LIM.boom[0],LIM.boom[1]);   // fwd(+) -> boom down(-)
     M.bucket= clamp(M.bucket+ CMD.bktX *rate*tf*dt, LIM.bucket[0],LIM.bucket[1]); // right(+) -> dump(+)
     M.stick = clamp(M.stick + CMD.stickY*rate*tf*dt, LIM.stick[0],LIM.stick[1]);  // fwd(+) -> stick extends out(+)
-    M.swing += CMD.swingX*0.7*tf*dt;
-    M.offset= clamp(M.offset+ CMD.offX*0.6*tf*dt, LIM.offset[0],LIM.offset[1]);
-    M.dozer = clamp(M.dozer + CMD.dozer*0.7*tf*dt, LIM.dozer[0],LIM.dozer[1]); // lever back / R -> blade up
+    M.swing -= CMD.swingX*0.7*tf*dt;   // stick left (-) -> +rotY -> nose toward -Z = operator's left
+    M.offset= clamp(M.offset- CMD.offX*0.6*tf*dt, LIM.offset[0],LIM.offset[1]);
+    if(M.bladeMode)
+      M.dozer = clamp(M.dozer + CMD.dozer*0.7*tf*dt, LIM.dozer[0],LIM.dozer[1]); // lever back / R -> blade up
+    else
+      M.stanceTarget = clamp(M.stanceTarget + CMD.dozer*0.55*tf*dt, 0, 1);       // rocker 3 back: lever adjusts track width
     M.thumb += (M.thumbTarget - M.thumb)*Math.min(1, dt*2.2*(0.5+tf));   // hydraulic thumb open/close
     M.trackL=CMD.travL; M.trackR=CMD.travR;
     drive={l:CMD.travL*tf, r:CMD.travR*tf};   // tracks feed the rigid-body sim
@@ -931,7 +987,7 @@ function step(dt){
     M.trackL=M.trackR=0;
     if((Math.abs(CMD.boomY)+Math.abs(CMD.bktX)+Math.abs(CMD.stickY)+Math.abs(CMD.swingX)+Math.abs(CMD.travL)+Math.abs(CMD.travR))>0.1){
       if(!M.engineOn) toast('Hydraulics inactive — start the engine');
-      else if(M.locked) toast('Controls locked — release the safety-lock lever (X)');
+      else if(M.locked) toast('Controls locked — flip the hydraulic-lock rocker OFF (X)');
     }
   }
   applyPose();
@@ -962,12 +1018,14 @@ function updateHUD(){
   document.getElementById('aSwing').textContent=((d(M.swing)%360+360)%360)+'°';
   document.getElementById('aOff').textContent=d(M.offset)+'°';
   document.getElementById('aDozer').textContent=d(M.dozer)+'°';
+  // thumb status follows the pedal / N key
+  { const s=document.getElementById('sThumb'), cl=M.thumbTarget>0.5;
+    s.textContent=cl?'CLOSED':'OPEN'; s.className='st '+(cl?'on':''); }
   // checklist
-  ck('ck1',M.locked|| (!M.locked&&M.engineOn));
-  ck('ck2',M.throttle>0.3);
-  ck('ck3',M.key>=1||M.engineOn);
-  ck('ck4',M.engineOn);
-  ck('ck5',M.engineOn&&!M.locked);
+  ck('ck1',M.throttle>0.3);
+  ck('ck2',M.key>=1||M.engineOn);
+  ck('ck3',M.engineOn);
+  ck('ck4',M.engineOn&&!M.locked);
 
   if(IS_MOBILE){
     const mk=document.getElementById('mKey');
@@ -990,14 +1048,11 @@ function ck(id,done){ document.getElementById(id).classList.toggle('done',!!done
 function wireUI(){
   document.querySelectorAll('.keysw button').forEach(b=>b.onclick=()=>setKey(+b.dataset.k===2?2:+b.dataset.k));
   document.getElementById('bLock').onclick=toggleLock;
+  document.getElementById('bMode').onclick=toggleMode;
+  document.getElementById('bLight').onclick=toggleLight;
   document.getElementById('bSpeed').onclick=toggleSpeed;
-  document.getElementById('bStance').onclick=()=>{ M.stanceTarget = M.stanceTarget>0.5?0:1;
-    const s=document.getElementById('sStance'); s.textContent=M.stanceTarget>0.5?'WIDE':'NARROW'; s.className='st '+(M.stanceTarget>0.5?'on':''); };
-  document.getElementById('bThumb').onclick=()=>{ M.thumbTarget = M.thumbTarget>0.5?0:1;
-    const s=document.getElementById('sThumb'); const cl=M.thumbTarget>0.5; s.textContent=cl?'CLOSED':'OPEN'; s.className='st '+(cl?'on':''); };
+  document.getElementById('bThumb').onclick=()=>{ M.thumbTarget = M.thumbTarget>0.5?0:1; };
   document.getElementById('bHorn').onclick=horn;
-  document.getElementById('bLight').onclick=()=>{ M.light=!M.light;
-    const s=document.getElementById('sLight'); s.textContent=M.light?'ON':'OFF'; s.className='st '+(M.light?'on':''); };
   document.getElementById('vOrbit').onclick=()=>setView('orbit');
   document.getElementById('vCockpit').onclick=()=>setView('fpv');
   document.getElementById('vReset').onclick=resetMachine;
@@ -1210,7 +1265,7 @@ function physSub(h, drive){
     _ldir.crossVectors(_n,_fdir).normalize();
     _vt.copy(_vp).addScaledVector(_n,-vn);
     const vf=_vt.dot(_fdir), vl=_vt.dot(_ldir);
-    const desF = powered ? ((bp._side>0?drive.l:drive.r)*maxsp) : 0;     // per-track speed
+    const desF = powered ? ((bp._side>0?drive.r:drive.l)*maxsp) : 0;     // +Z side = operator's RIGHT track
     let Ff = powered ? 5500*(desF - vf) : -3500*vf;   // drive toward target / brake
     let Fl = -8000*vl;                                 // lateral grip (no side-slip)
     const maxT=0.95*Fn, tm=Math.hypot(Ff,Fl);          // traction-circle limit
@@ -1295,7 +1350,7 @@ function spawnRock(x,z,r,opt){
 function buildColliders(){
   // moving boxes (OBBs) on the machine that shove rocks around
   COLLIDERS=[
-    {name:'blade',  anchor:dozerBladeMesh, off:new THREE.Vector3(0,0,0),      he:new THREE.Vector3(0.12,0.22,0.95), prev:null},
+    {name:'blade',  anchor:dozerBladeMesh, off:new THREE.Vector3(0,0,0),      he:new THREE.Vector3(0.12,0.22,1.48), prev:null},
     {name:'bucket', anchor:bucketGrp,      off:new THREE.Vector3(0.32,-0.3,0), he:new THREE.Vector3(0.4,0.4,0.46), prev:null},
     {name:'thumb',  anchor:thumbGrp,       off:new THREE.Vector3(1.05,0.08,0),he:new THREE.Vector3(0.3,0.12,0.4),prev:null},
     {name:'body',   anchor:root,           off:new THREE.Vector3(-0.2,0.75,0),he:new THREE.Vector3(1.7,0.75,1.15),  prev:null},
@@ -1569,7 +1624,7 @@ function buildParticleColliders(){
     {a:bucketGrp, o:[0.31,-0.30,0.40],h:[0.32,0.27,0.06]},   // side +Z
     {a:bucketGrp, o:[0.31,-0.30,-0.40],h:[0.32,0.27,0.06]},  // side -Z
     // solid machine parts that shove material around
-    {a:dozerBladeMesh, o:[0,0,0],      h:[0.12,0.22,0.95]},  // dozer blade
+    {a:dozerBladeMesh, o:[0,0,0],      h:[0.12,0.22,1.48]},  // dozer blade
     {a:root,           o:[-0.2,0.75,0],h:[1.7,0.75,1.15]},   // body
     {a:thumbGrp,       o:[1.05,0.08,0],h:[0.3,0.12,0.4]},    // thumb
   ];
