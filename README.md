@@ -23,10 +23,24 @@ Each game directory contains box art named `shot_0.png` (later shots:
 for its cards, so shots deploy with the game itself — no assets live in `home/`.
 If a shot is missing, the card shows an emoji placeholder instead.
 
-When adding a game: generate the box art (16:9 PNG), drop it in the game dir,
-add a card to `home/index.html`, then `./scripts/deploy.sh <name>` and
-`./scripts/deploy-home.sh`. The card list is manual — nothing auto-discovers
-new games.
+When adding a game: generate the box art, drop it in the game dir, add a card to
+`home/index.html`, then `./scripts/deploy.sh <name>` and `./scripts/deploy-home.sh`.
+The card list is manual — nothing auto-discovers new games.
+
+## Box Art Prompt
+
+Every existing `shot_0.png` is 1448×1086 (4:3) in the same house style. Fill in
+the bracketed parts and hand this to an image generator:
+
+> Glossy 3D-rendered children's game box art, Pixar/mobile-game style.
+> [SUBJECT: the hero character, mid-action, big friendly eyes, chunky rounded
+> forms], set in [SETTING: the game's world]. [FOREGROUND PROPS] scattered in the
+> lower corners, [BACKGROUND LANDMARK] softly blurred behind. Saturated candy
+> colors, warm rim light, sparkles and soft bloom, cheerful and inviting, no
+> text, no logos, no UI. 4:3 aspect ratio, 1448×1086.
+
+Keep the hero large and centered-right, the camera low and close, and pull the
+palette from the game's actual background colors so the card matches the game.
 
 ## Setup (one-time)
 
