@@ -29,18 +29,23 @@ The card list is manual — nothing auto-discovers new games.
 
 ## Box Art Prompt
 
-Every existing `shot_0.png` is 1448×1086 (4:3) in the same house style. Fill in
-the bracketed parts and hand this to an image generator:
+Box art is generated from a **style anchor** — pass `games/miniex/shot_0.png` as
+Image A so every card stays in the same family. Existing shots are 1448×1086 (4:3).
+Fill in the bracketed parts:
 
-> Glossy 3D-rendered children's game box art, Pixar/mobile-game style.
-> [SUBJECT: the hero character, mid-action, big friendly eyes, chunky rounded
-> forms], set in [SETTING: the game's world]. [FOREGROUND PROPS] scattered in the
-> lower corners, [BACKGROUND LANDMARK] softly blurred behind. Saturated candy
-> colors, warm rim light, sparkles and soft bloom, cheerful and inviting, no
-> text, no logos, no UI. 4:3 aspect ratio, 1448×1086.
+> Image A is a style anchor for the series. Create matching kid-friendly indie game
+> box art / app-store key art for a game called **[GAME SLUG]**, keeping the same
+> cohesive family-friendly art direction as Image A: polished stylized 3D diorama
+> look, clean geometric forms, soft rounded edges, chunky toy-like proportions,
+> saturated but tasteful candy colors, soft global illumination, warm rim light,
+> gentle bloom, subtle sparkles, and clear readable silhouettes in a slightly
+> cinematic composition that stays clear at thumbnail size. Show **[HERO + ACTION]**.
+> In the lower-left, include **[FOREGROUND PROPS]**. In the lower-right, include
+> **[FOREGROUND PROPS]**. In the softly blurred background, show **[BACKGROUND]**.
+> Keep the mood cheerful, inviting, and playful. No text, no logos, no UI, no border.
 
-Keep the hero large and centered-right, the camera low and close, and pull the
-palette from the game's actual background colors so the card matches the game.
+Pull the scene details from the game's own world and palette so the card matches
+what the player actually sees.
 
 ## Setup (one-time)
 
